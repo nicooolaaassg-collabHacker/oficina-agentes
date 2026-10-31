@@ -1,0 +1,1162 @@
+<title>La oficina de Claude</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<style>
+/* Layout: una habitación con un monitor retro (la escena) a la izquierda y un panel de control lateral; en móvil se apilan. */
+:root{
+  --bg:#E6ECF1; --wall:#D5DEE6; --wall-2:#CCD6DF; --desk:#A87650; --desk-edge:#8B5E3D;
+  --bezel:#EEF0F2; --bezel-edge:#C3CAD1;
+  --panel:#F8FAFC; --ink:#1C2630; --muted:#56636F; --line:#D2DAE2; --chip:#E7EDF2;
+  --accent:#B9532F; --accent-ink:#FFFFFF; --ok:#2C8452; --warn:#A86E12;
+  /* Pantalla: el "sistema operativo" se ve igual en ambos temas */
+  --os-wall:#21465D; --os-wall-2:#2A5672; --os-win:#F4F6F8; --os-title:#D9E1E8; --os-line:#17222C;
+  --os-text:#1E2933; --os-term:#121A21; --os-term-text:#CFE3D6; --os-bar:#141F28;
+  --os-k:#9A3BA6; --os-s:#2B7A4B; --os-c:#8A939C; --os-n:#B4532B; --os-p:#E8B04B; --os-ok:#6DDB97; --os-err:#FF8A7A;
+  --claude:#D97757;
+  --f-display:"Pixelify Sans", ui-monospace, "SF Mono", monospace;
+  --f-body:"Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1318; --wall:#141B23; --wall-2:#18212B; --desk:#4A3426; --desk-edge:#35251B;
+    --bezel:#2A3038; --bezel-edge:#1B2026;
+    --panel:#151C24; --ink:#E5EBF0; --muted:#98A5B1; --line:#27313B; --chip:#202933;
+    --accent:#EB8A62; --accent-ink:#1C0F09; --ok:#5CC48A; --warn:#E3B04B;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1318; --wall:#141B23; --wall-2:#18212B; --desk:#4A3426; --desk-edge:#35251B;
+  --bezel:#2A3038; --bezel-edge:#1B2026;
+  --panel:#151C24; --ink:#E5EBF0; --muted:#98A5B1; --line:#27313B; --chip:#202933;
+  --accent:#EB8A62; --accent-ink:#1C0F09; --ok:#5CC48A; --warn:#E3B04B;
+  color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body)}
+[hidden]{display:none!important}
+.page{max-width:1340px;margin:0 auto;padding-block:20px 32px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:16px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.brand img{width:64px;height:44px;image-rendering:pixelated;flex:none}
+h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing:.01em;text-wrap:balance}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.status{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font:600 13px var(--f-mono)}
+.status .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);animation:pulse 1.6s infinite}
+.status[data-s="pause"] .dot{background:var(--warn);animation:none}
+.status[data-s="done"] .dot,.status[data-s="wait"] .dot{background:var(--accent);animation:none}
+.status[data-s="ask"] .dot{background:var(--warn);animation:pulse 1s infinite}
+.status[data-s="off"] .dot{background:var(--muted);animation:none}
+.topright{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mode{font:700 11px var(--f-mono);letter-spacing:.12em;padding:6px 10px;border-radius:999px;background:var(--chip);color:var(--muted)}
+.mode.on{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 55%,transparent)}100%{box-shadow:0 0 0 8px transparent}}
+
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:700 14px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.06)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{font:600 13px var(--f-mono);border:0;background:none;color:var(--muted);padding:8px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+#taskForm{display:flex;gap:8px;flex:1 1 320px;min-width:0}
+#taskInput{flex:1;min-width:0;font:15px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+#taskInput::placeholder{color:var(--muted)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:1020px){.app{grid-template-columns:minmax(0,1fr)}}
+
+/* Habitación */
+.room{border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-width:0;
+  background:repeating-linear-gradient(90deg,var(--wall) 0 26px,var(--wall-2) 26px 28px)}
+.room-inner{padding:clamp(12px,3vw,34px) clamp(10px,4vw,54px) 0}
+.monitor{position:relative;background:var(--bezel);border-radius:18px;padding:clamp(8px,1.4vw,14px) clamp(8px,1.4vw,14px) clamp(18px,2.4vw,28px);box-shadow:inset 0 -4px 0 var(--bezel-edge),0 10px 30px rgba(0,0,0,.12)}
+.monitor .led{position:absolute;bottom:clamp(6px,.9vw,10px);right:clamp(14px,2vw,24px);width:6px;height:6px;border-radius:50%;background:var(--os-ok);box-shadow:0 0 6px var(--os-ok)}
+.monitor .maker{position:absolute;bottom:clamp(4px,.7vw,8px);left:50%;transform:translateX(-50%);font:600 10px var(--f-display);letter-spacing:.2em;color:var(--muted);opacity:.7}
+.screen{position:relative;aspect-ratio:960/560;max-width:100%;overflow:hidden;border-radius:6px;background:var(--os-wall);box-shadow:inset 0 0 0 2px var(--os-line)}
+.stage{position:absolute;left:0;top:0;width:960px;height:560px;transform-origin:0 0;font-family:var(--f-mono)}
+.neck{width:13%;height:clamp(14px,2.6vw,32px);margin:0 auto;background:linear-gradient(90deg,var(--bezel-edge),var(--bezel) 40%,var(--bezel-edge))}
+.base{width:30%;height:10px;margin:0 auto;background:var(--bezel);border-radius:8px 8px 0 0;box-shadow:inset 0 -3px 0 var(--bezel-edge)}
+.desk{position:relative;height:clamp(36px,6vw,58px);background:var(--desk);box-shadow:inset 0 8px 0 var(--desk-edge)}
+.keyboard{position:absolute;left:50%;top:16px;transform:translateX(-50%);width:36%;height:14px;border-radius:4px;background:var(--bezel);box-shadow:0 3px 0 var(--bezel-edge);background-image:repeating-linear-gradient(90deg,transparent 0 9px,var(--bezel-edge) 9px 10px)}
+.mug{position:absolute;right:11%;bottom:calc(100% - 4px);width:24px;height:28px;background:var(--accent);border-radius:0 0 6px 6px}
+.mug::after{content:"";position:absolute;right:-9px;top:6px;width:7px;height:11px;border:3px solid var(--accent);border-left:0;border-radius:0 6px 6px 0}
+
+/* Escritorio dentro de la pantalla */
+.wallpaper{position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,var(--os-wall-2),transparent 60%),radial-gradient(rgba(255,255,255,.07) 1px,transparent 1.5px) 0 0/16px 16px}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:32px;background:var(--os-bar);display:flex;align-items:center;gap:6px;padding:0 8px;z-index:2500;border-top:2px solid var(--os-line)}
+.start{width:22px;height:22px;background:var(--claude);border:2px solid var(--os-line);flex:none}
+#tbWins{display:flex;gap:6px;flex:1;min-width:0;overflow:hidden}
+.tbchip{font:600 11px var(--f-mono);color:#DDE6EE;background:rgba(255,255,255,.08);border-bottom:2px solid var(--c);padding:3px 8px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.clock{font:600 12px var(--f-mono);color:#DDE6EE;font-variant-numeric:tabular-nums}
+
+.icon{position:absolute;left:0;top:0;width:76px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:1}
+.icon .glyph{width:40px;height:44px;position:relative}
+.icon span{font:600 11px/1.25 var(--f-mono);color:#fff;background:rgba(8,16,24,.45);padding:1px 4px;border-radius:3px;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file .glyph b{position:absolute;inset:0 4px;background:linear-gradient(to top,var(--x,#5B6875) 0 13px,#F7F9FB 13px);border:2px solid var(--os-line);clip-path:polygon(0 0,68% 0,100% 26%,100% 100%,0 100%)}
+.file .glyph small{position:absolute;left:4px;right:4px;bottom:2px;text-align:center;font:700 8px/1 var(--f-mono);color:#fff;letter-spacing:.04em}
+.folder .glyph::before{content:"";position:absolute;left:2px;top:4px;width:18px;height:10px;background:#D2952B;border:2px solid var(--os-line);border-bottom:0;border-radius:3px 3px 0 0}
+.folder .glyph b{position:absolute;left:0;right:0;bottom:2px;height:30px;background:#E9B44C;border:2px solid var(--os-line);border-radius:2px 4px 4px 4px}
+.badge{position:absolute;right:-8px;top:0;z-index:2;background:var(--claude);color:#fff;font:700 10px/14px var(--f-mono);font-style:normal;padding:0 4px;border-radius:8px;border:2px solid var(--os-line);min-width:14px;text-align:center}
+.icon.held{z-index:2000}
+.icon.held .glyph{transform:rotate(-8deg)}
+.icon.held span{display:none}
+.icon.new .glyph{animation:popIn .35s ease-out}
+.icon.sucked{transition:transform .35s ease-in}
+.icon.sucked .glyph,.icon.sucked span{transition:transform .35s,opacity .35s;transform:scale(.2);opacity:0}
+.folder.bump .glyph{animation:bump .35s}
+@keyframes popIn{0%{transform:scale(0)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes bump{50%{transform:scale(1.18)}}
+
+.win{position:absolute;display:flex;flex-direction:column;background:var(--os-win);border:2px solid var(--os-line);border-radius:6px;box-shadow:6px 8px 0 rgba(0,0,0,.22);overflow:hidden;animation:winIn .25s ease-out}
+.win.closing{animation:winOut .22s ease-in forwards}
+@keyframes winIn{from{transform:scale(.6);opacity:0}}
+@keyframes winOut{to{transform:scale(.7);opacity:0}}
+.win .tb{height:24px;flex:none;display:flex;align-items:center;gap:5px;padding:0 8px;background:var(--os-title);border-bottom:2px solid var(--os-line);font:600 12px var(--f-mono);color:var(--os-text)}
+.win .tb i{width:9px;height:9px;border-radius:50%;background:#E0675A;border:1px solid var(--os-line)}
+.win .tb i:nth-child(2){background:#E8B04B}.win .tb i:nth-child(3){background:#6CC08B}
+.win .tb span{margin-left:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.win .tb em{margin-left:auto;flex:none;width:10px;height:10px;background:var(--c);border:2px solid var(--os-line)}
+.win .body{flex:1;overflow:hidden;padding:8px 10px;font:12px/1.6 var(--f-mono);color:var(--os-text)}
+.ln{white-space:pre;overflow:hidden;text-overflow:ellipsis;animation:lnIn .2s ease-out}
+@keyframes lnIn{from{opacity:0;transform:translateX(-6px)}}
+.ln u{text-decoration:none;color:var(--os-c);display:inline-block;width:22px}
+.k{color:var(--os-k);font-weight:600}.s{color:var(--os-s)}.c{color:var(--os-c);font-style:italic}.n{color:var(--os-n)}
+.term .body{background:var(--os-term);color:var(--os-term-text)}
+.term .p{color:var(--os-p);font-weight:600}.term .ok{color:var(--os-ok)}.term .err{color:var(--os-err)}.term .path{color:#8FB9E8}
+.term .ln:last-child::after{content:"▋";margin-left:2px;animation:caret 1s steps(1) infinite}
+@keyframes caret{50%{opacity:0}}
+.plan .body{background:#FFFDF2}
+.plan .ln b{color:var(--os-text)}
+.cb{display:inline-block;width:9px;height:9px;border:2px solid var(--os-text);margin-right:6px;vertical-align:-1px}
+.web .body{background:#fff;display:flex;flex-direction:column;gap:7px}
+.blk{animation:popIn .3s ease-out;transform-origin:left center}
+.blk.nav{height:14px;background:#1F2B36;border-radius:3px}
+.blk.hero{height:50px;border-radius:4px;background:linear-gradient(90deg,#F2C9B6,#E5946F)}
+.blk.cards{height:40px;background:linear-gradient(90deg,#E3EAF0 0 31%,transparent 31% 34.5%,#E3EAF0 34.5% 65.5%,transparent 65.5% 69%,#E3EAF0 69%)}
+.blk.text{height:8px;width:82%;background:#D3DCE3;border-radius:2px}
+.blk.btn{height:18px;width:76px;background:var(--claude);border-radius:3px}
+
+.agent{position:absolute;left:0;top:0;will-change:transform}
+.agent img{display:block;position:relative;z-index:1;image-rendering:pixelated;pointer-events:none}
+.agent .sh{position:absolute;left:14%;right:14%;top:calc(var(--h) - 5px);height:7px;border-radius:50%;background:rgba(0,0,0,.3)}
+.agent .tag{position:absolute;left:50%;top:calc(var(--h) + 4px);transform:translateX(-50%);white-space:nowrap;font:600 11px var(--f-mono);color:#fff;background:rgba(8,14,20,.72);border-left:3px solid var(--c);padding:1px 5px}
+.bubble{position:absolute;left:50%;bottom:calc(100% + 10px);z-index:2;width:max-content;max-width:230px;font:700 14px/1.3 var(--f-body);color:#17202A;background:#fff;border:2px solid var(--os-line);border-radius:8px;padding:6px 10px;box-shadow:3px 3px 0 rgba(0,0,0,.25);animation:popIn .2s ease-out}
+.bubble::after{content:"";position:absolute;left:calc(50% - var(--sx,0px) - 6px);bottom:-8px;width:10px;height:10px;background:#fff;border-right:2px solid var(--os-line);border-bottom:2px solid var(--os-line);transform:rotate(45deg)}
+.agent.carrying .bubble{bottom:calc(100% + 62px)}
+
+.px{position:absolute;width:7px;height:7px;background:var(--c);z-index:3000;animation:burst .6s ease-out forwards;pointer-events:none}
+@keyframes burst{to{transform:translate(var(--dx),var(--dy)) scale(.4);opacity:0}}
+.cf{position:absolute;top:-12px;width:8px;height:8px;background:var(--c);z-index:3000;animation:fall var(--t) linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translate(var(--dx),600px) rotate(var(--r))}}
+.paused .stage *{animation-play-state:paused!important}
+
+/* Panel lateral */
+.side{background:var(--panel);border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;min-width:0}
+.side>section{padding:16px 18px;border-top:1px solid var(--line);min-width:0}
+.side>section:first-child{border-top:0}
+.side h2{margin:0 0 10px;font:600 12px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.side h2 span{letter-spacing:0;text-transform:none}
+#taskName{font:700 20px/1.2 var(--f-display);margin:0 0 12px;text-wrap:balance}
+.bar{height:12px;background:var(--chip)}
+.bar i{display:block;height:100%;width:0;background-color:var(--accent);background-image:repeating-linear-gradient(90deg,transparent 0 9px,var(--panel) 9px 11px)}
+.meta{display:flex;justify-content:space-between;gap:8px;font:13px var(--f-mono);color:var(--muted);margin-top:8px;font-variant-numeric:tabular-nums}
+.meta b{color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
+.stats div{display:flex;flex-direction:column;min-width:0}
+.stats b{font:700 18px var(--f-mono);font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--muted);line-height:1.25}
+#plan{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+#plan li{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
+#plan li::before{content:"";flex:none;width:14px;height:14px;box-sizing:border-box;border:2px solid var(--line);display:grid;place-items:center;font:700 10px/1 var(--f-mono)}
+#plan li.run{color:var(--ink);font-weight:700}
+#plan li.run::before{border-color:var(--accent);background:linear-gradient(var(--accent),var(--accent)) center/6px 6px no-repeat;animation:blinkbox 1s steps(2) infinite}
+#plan li.done{color:var(--ink)}
+#plan li.done::before{content:"✓";background:var(--ok);border-color:var(--ok);color:var(--panel)}
+#plan li.none{font-style:italic}
+#plan li.none::before{display:none}
+@keyframes blinkbox{50%{background-size:0 0}}
+#roster{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+#roster li{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center}
+#roster img{width:36px;height:25px;image-rendering:pixelated}
+.rn{font-weight:700;font-size:14px;line-height:1.2}
+.rn small{font-weight:400;color:var(--muted);margin-left:6px;font-size:12px}
+.ra{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font:600 11px var(--f-mono);padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.chip.on{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.chip.lead{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+#log{list-style:none;margin:0;padding:0;max-height:320px;overflow:auto;display:flex;flex-direction:column;gap:7px;font-size:13px}
+#log li{display:flex;flex-wrap:wrap;gap:3px 8px;align-items:baseline}
+#log li:first-child{animation:lnIn .3s ease-out}
+#log time{font:12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.who{font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.who::before{content:"";width:8px;height:8px;background:var(--c)}
+#log code{font:600 11px var(--f-mono);background:var(--chip);padding:1px 6px;border-radius:4px;color:var(--ink)}
+.txt{color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.hint{font-size:12px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion: reduce){.status .dot,#plan li.run::before,.term .ln:last-child::after{animation:none}}
+</style>
+
+<div class="page" id="page">
+  <header class="top">
+    <div class="brand">
+      <img id="logo" alt="">
+      <div>
+        <h1>La oficina de Claude</h1>
+        <p>Claude Code reparte una tarea larga entre sus agentes y se pone a trabajar.</p>
+      </div>
+    </div>
+    <div class="topright">
+      <span class="mode" id="mode">SIMULACIÓN</span>
+      <div class="status" id="status" data-s="work" role="status"><span class="dot"></span><span id="statusText">Trabajando</span></div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <button class="btn" id="btnPause" type="button">Pausar</button>
+    <div class="seg" role="group" aria-label="Velocidad">
+      <button type="button" data-speed="1" aria-pressed="true">1×</button>
+      <button type="button" data-speed="2" aria-pressed="false">2×</button>
+      <button type="button" data-speed="4" aria-pressed="false">4×</button>
+    </div>
+    <button class="btn" id="btnAgent" type="button">+ Lanzar agente</button>
+    <form id="taskForm">
+      <label for="taskInput" hidden>Nueva tarea</label>
+      <input id="taskInput" type="text" maxlength="70" placeholder="Escribe una tarea para Claude…" autocomplete="off">
+      <button class="btn primary" type="submit">Empezar tarea</button>
+    </form>
+  </div>
+
+  <main class="app">
+    <section class="room" aria-label="Escena del ordenador">
+      <div class="room-inner">
+        <div class="monitor">
+          <div class="screen" id="screen">
+            <div class="stage" id="stage">
+              <div class="wallpaper"></div>
+              <div id="layerIcons"></div>
+              <div id="layerWins"></div>
+              <div id="layerAgents"></div>
+              <div id="layerFx"></div>
+              <div class="taskbar"><div class="start"></div><div id="tbWins"></div><div class="clock" id="clock">--:--</div></div>
+            </div>
+          </div>
+          <span class="maker">OFICINA</span>
+          <span class="led"></span>
+        </div>
+        <div class="neck"></div>
+        <div class="base"></div>
+      </div>
+      <div class="desk"><div class="keyboard"></div><div class="mug"></div></div>
+    </section>
+
+    <aside class="side">
+      <section>
+        <h2>Tarea <span id="taskNum"></span></h2>
+        <p id="taskName">Preparando…</p>
+        <div class="bar" role="progressbar" aria-label="Progreso de la tarea" aria-valuemin="0" aria-valuemax="100"><i id="bar"></i></div>
+        <div class="meta"><span><b id="pct">0%</b> hecho</span><span id="times">00:00</span></div>
+        <div class="stats">
+          <div><b id="stTools">0</b><span>herramientas</span></div>
+          <div><b id="stFiles">0</b><span>archivos</span></div>
+          <div><b id="stAgents">0</b><span>agentes lanzados</span></div>
+          <div><b id="stDone">0</b><span id="stDoneLabel">tareas hechas</span></div>
+        </div>
+      </section>
+      <section>
+        <h2>Plan</h2>
+        <ol id="plan"></ol>
+      </section>
+      <section>
+        <h2>Agentes <span id="agentCount"></span></h2>
+        <ul id="roster"></ul>
+      </section>
+      <section>
+        <h2>Registro</h2>
+        <ol id="log"></ol>
+      </section>
+      <section><p class="hint" id="hint">Simulación animada. Para ver tus sesiones reales, instala el plugin <code>oficina-agentes</code> y escribe <code>/oficina</code> en Claude Code. Barra espaciadora: pausar o seguir.</p></section>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+const W = 960, H = 560, FLOOR = H - 32;
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = s => document.querySelector(s);
+const stage = $('#stage'), screen = $('#screen');
+const L = { icons: $('#layerIcons'), wins: $('#layerWins'), agents: $('#layerAgents'), fx: $('#layerFx') };
+const tb = $('#tbWins');
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = s => { s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(x).padStart(2, '0'); };
+
+function fit() { stage.style.transform = `scale(${screen.clientWidth / W})`; }
+new ResizeObserver(fit).observe(screen); fit();
+
+/* ---------- Sprites pixel ---------- */
+const COLORS = { claude: '#D97757', amber: '#E2A443', sage: '#7FB07A', sky: '#6E9FD6', lilac: '#AE8FD8', rose: '#E07F9C' };
+function shade(hex, f) { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.round(v * f)); return `rgb(${c})`; }
+const cache = new Map();
+function sprite(color, { legs = 0, eye = 0, blink = false, arms = 'down' } = {}) {
+  const key = [color, legs, eye, blink, arms].join('|');
+  if (cache.has(key)) return cache.get(key);
+  const c = document.createElement('canvas'); c.width = 16; c.height = 11;
+  const g = c.getContext('2d');
+  g.fillStyle = color; g.fillRect(3, 2, 10, 7);
+  g.fillStyle = shade(color, .8); g.fillRect(3, 8, 10, 1);
+  g.fillStyle = color;
+  const ay = side => (arms === 'up' || arms === side) ? 2 : 4;
+  g.fillRect(1, ay('l'), 2, 2); g.fillRect(13, ay('r'), 2, 2);
+  g.fillStyle = shade(color, .8);
+  [4, 6, 9, 11].forEach((x, i) => { let h = 2; if (legs === 1) h = i % 2 ? 1 : 2; if (legs === 2) h = i % 2 ? 2 : 1; g.fillRect(x, 9, 1, h); });
+  g.fillStyle = '#2A1A12';
+  g.fillRect(5 + eye, blink ? 5 : 4, 1, blink ? 1 : 2); g.fillRect(10 + eye, blink ? 5 : 4, 1, blink ? 1 : 2);
+  const url = c.toDataURL(); cache.set(key, url); return url;
+}
+$('#logo').src = sprite(COLORS.claude);
+
+/* ---------- Estado global ---------- */
+const agents = [], items = [], wins = [];
+const stats = { tools: 0, files: 0, agents: 0, done: 0 };
+let main, task, taskNum = 0, presetIdx = -1, taskT = 0, elapsed = 0, progress = 0, shown = 0;
+let paused = false, speed = 1, status = 'work', uid = 0, nameCounts = {}, live = false;
+
+/* ---------- Efectos ---------- */
+function burst(x, y, color, n = 10) {
+  if (REDUCE) return;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i'); p.className = 'px';
+    const ang = Math.PI * 2 * i / n + rnd(-.3, .3), d = rnd(18, 40);
+    p.style.cssText = `left:${x}px;top:${y}px;--c:${color};--dx:${Math.cos(ang) * d}px;--dy:${Math.sin(ang) * d}px`;
+    L.fx.appendChild(p); setTimeout(() => p.remove(), 650);
+  }
+}
+function confetti() {
+  if (REDUCE) return;
+  const cols = Object.values(COLORS);
+  for (let i = 0; i < 80; i++) {
+    const p = document.createElement('i'); p.className = 'cf';
+    const t = rnd(1.6, 3);
+    p.style.cssText = `left:${rnd(0, W)}px;--c:${pick(cols)};--dx:${rnd(-80, 80)}px;--r:${rnd(-540, 540)}deg;--t:${t}s;animation-delay:${rnd(0, .5)}s`;
+    L.fx.appendChild(p); setTimeout(() => p.remove(), (t + .6) * 1000);
+  }
+}
+
+/* ---------- Iconos del escritorio ---------- */
+const EXT = { lua: '#3E6FD8', js: '#C9961F', jsx: '#2E9BBE', json: '#6F808E', md: '#4E5B67', txt: '#8A939C', css: '#8455C8' };
+class Item {
+  constructor(kind, name, x, y, fresh) {
+    Object.assign(this, { kind, name, x: clamp(x, 0, W - 76), y: clamp(y, 0, FLOOR - 70), count: 0 });
+    const ext = name.split('.').pop();
+    const el = this.el = document.createElement('div');
+    el.className = 'icon ' + kind + (fresh ? ' new' : '');
+    if (kind === 'file') el.style.setProperty('--x', EXT[ext] || '#5B6875');
+    el.innerHTML = kind === 'file'
+      ? `<div class="glyph"><b></b><small>${esc(ext.toUpperCase())}</small></div><span>${esc(name)}</span>`
+      : `<div class="glyph"><b></b><em class="badge" hidden>0</em></div><span>${esc(name)}</span>`;
+    L.icons.appendChild(el); items.push(this); this.place();
+  }
+  place() { this.el.style.transform = `translate(${this.x}px,${this.y}px)`; }
+  intoFolder(f) {
+    this.gone = true; this.el.classList.remove('held'); this.el.classList.add('sucked');
+    this.x = f.x; this.y = f.y; this.place();
+    setTimeout(() => this.el.remove(), 380);
+    items.splice(items.indexOf(this), 1);
+    f.count++; const b = f.el.querySelector('.badge'); b.hidden = false; b.textContent = f.count;
+    f.el.classList.remove('bump'); void f.el.offsetWidth; f.el.classList.add('bump');
+    stats.files++;
+  }
+  remove() { this.gone = true; this.el.remove(); const i = items.indexOf(this); if (i >= 0) items.splice(i, 1); }
+}
+const folders = {};
+['src', 'tests', 'assets', 'docs'].forEach((n, i) => folders[n] = new Item('folder', n, 12, 16 + i * 86));
+function folderFor(f) {
+  const ext = f.name.split('.').pop();
+  if (/test|spec/.test(f.name)) return folders.tests;
+  if (['lua', 'js', 'jsx', 'ts'].includes(ext)) return folders.src;
+  if (['md', 'txt'].includes(ext)) return folders.docs;
+  return folders.assets;
+}
+function freeFile(prefer) {
+  const ok = items.filter(i => i.kind === 'file' && !i.gone && !i.carrier && !i.claimed);
+  const f = ok.find(i => i.name === prefer) || pick(ok);
+  if (f) f.claimed = true;
+  return f;
+}
+function nearItem(it, a) {
+  if (!it || it.gone) return null;
+  return { x: it.x < W / 2 ? it.x + 70 : it.x - a.w + 6, y: it.y + 62 - a.h };
+}
+function resetDesktop(files) {
+  items.filter(i => i.kind === 'file').forEach(i => i.remove());
+  files.forEach((n, i) => setTimeout(() => new Item('file', n, W - 90, 16 + i * 86, true), 120 * i));
+}
+
+/* ---------- Ventanas ---------- */
+const WIN_SIZE = { term: [340, 190], code: [360, 230], plan: [280, 214], web: [340, 230] };
+const WIN_MAX = { term: 8, code: 10, plan: 8, web: 6 };
+const overlap = (x, y, w, h, o) => Math.max(0, Math.min(x + w, o.x + o.w) - Math.max(x, o.x)) * Math.max(0, Math.min(y + h, o.y + o.h) - Math.max(y, o.y));
+class Win {
+  constructor(kind, title, owner) {
+    Object.assign(this, { kind, title, n: 0 });
+    [this.w, this.h] = WIN_SIZE[kind];
+    let best, bs = Infinity;
+    for (let i = 0; i < 16; i++) {
+      const x = rnd(112, W - 104 - this.w), y = rnd(12, FLOOR - this.h - 40);
+      const s = wins.reduce((t, o) => t + overlap(x, y, this.w, this.h, o), 0);
+      if (s < bs) { bs = s; best = { x, y }; }
+    }
+    Object.assign(this, best);
+    const el = this.el = document.createElement('div');
+    el.className = 'win ' + kind;
+    el.style.cssText = `left:${this.x}px;top:${this.y}px;width:${this.w}px;height:${this.h}px`;
+    el.innerHTML = `<div class="tb"><i></i><i></i><i></i><span>${esc(title)}</span><em style="--c:${owner.color}"></em></div><div class="body"></div>`;
+    this.body = el.querySelector('.body');
+    L.wins.appendChild(el); wins.push(this); this.focus();
+    this.chip = document.createElement('span'); this.chip.className = 'tbchip';
+    this.chip.style.setProperty('--c', owner.color); this.chip.textContent = title; tb.appendChild(this.chip);
+    burst(this.x + this.w / 2, this.y + this.h / 2, owner.color, 8);
+  }
+  focus() {
+    if (wins[wins.length - 1] !== this) { wins.splice(wins.indexOf(this), 1); wins.push(this); }
+    wins.forEach((w, i) => w.el.style.zIndex = 10 + i);
+  }
+  stand(a) { return { x: this.x + rnd(20, this.w - 20 - a.w), y: this.y + this.h + 2 - a.h }; }
+  add(line) {
+    const d = document.createElement('div');
+    if (this.kind === 'web') d.className = 'blk ' + line;
+    else {
+      d.className = 'ln';
+      d.innerHTML = this.kind === 'term' ? fmtTerm(line) : this.kind === 'plan' ? fmtPlan(line) : `<u>${++this.n}</u>${fmtCode(line)}`;
+    }
+    this.body.appendChild(d);
+    while (this.body.children.length > WIN_MAX[this.kind]) this.body.firstChild.remove();
+  }
+  close() {
+    if (this.closed) return; this.closed = true;
+    this.el.classList.add('closing'); this.chip.remove();
+    wins.splice(wins.indexOf(this), 1);
+    setTimeout(() => this.el.remove(), 240);
+  }
+}
+const KW = /(--.*|\/\/.*)|("[^"]*"|'[^']*')|\b(local|function|end|if|then|return|const|let|for|in|do|await|async|export|import|from|else|new|nil|true|false|not|and)\b|\b(\d+)\b/g;
+function fmtCode(l) { return esc(l).replace(KW, (m, c, s, k, n) => c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : k ? `<span class="k">${k}</span>` : `<span class="n">${n}</span>`); }
+function fmtTerm(l) {
+  const e = esc(l);
+  if (l.startsWith('$')) return `<span class="p">$</span>${e.slice(1)}`;
+  if (l.includes('✓')) return `<span class="ok">${e}</span>`;
+  if (l.includes('✗')) return `<span class="err">${e}</span>`;
+  if (l.startsWith('src/')) return e.replace(/^(\S+)/, '<span class="path">$1</span>');
+  return e;
+}
+function fmtPlan(l) {
+  if (l.startsWith('# ')) return `<b>${esc(l.slice(2))}</b>`;
+  if (l.startsWith('- ')) return `<i class="cb"></i>${esc(l.slice(2))}`;
+  return esc(l);
+}
+const atWin = key => a => { const w = a.wins[key]; return w && !w.closed ? w.stand(a) : null; };
+
+/* ---------- Contenido de ejemplo ---------- */
+const CODE = [
+  'local Tienda = {}', 'function Tienda.comprar(jugador, skinId)', '  local precio = Catalogo[skinId].precio',
+  '  if jugador.monedas < precio then return false end', '  jugador.monedas -= precio', '  Inventario.dar(jugador, skinId)',
+  '  return true', 'end', '-- TODO: guardar en DataStore', 'export async function cargarStats(id) {',
+  '  const res = await api.get(`/stats/${id}`)', '  return res.datos.filter(d => d.activo)', '}',
+  '// cachear 30 segundos', 'const zonas = mapa.zonas.map(z => z.id)', 'for i, zona in ipairs(zonas) do',
+  '  zona.dueno = nil -- reiniciar', 'import { tokens } from "./tema.js"', 'if (!usuario) throw new Error("sin sesión")',
+  'let total = 0', 'total += partida.puntos * 2', 'const ui = crearPanel("Tienda")', 'ui.onClick(() => abrir(skin))',
+];
+const CSS_LINES = ['.boton {', '  min-height: 44px;', '  padding: 12px 18px;', '}'];
+function codeLines(n) { const s = Math.floor(Math.random() * CODE.length); return Array.from({ length: n }, (_, i) => CODE[(s + i) % CODE.length]); }
+
+const TASKS = [
+  { name: 'Añadir una tienda de skins al juego', grep: 'monedas', files: ['README.md', 'Tienda.lua', 'Catalogo.lua', 'skins.json', 'notas.txt'], newFiles: ['TiendaUI.lua', 'Compras.lua'], main: 'Tienda.lua', test: 'tienda.spec.lua', cmd: 'lune run tests', steps: ['Ver cómo se guardan las monedas', 'Crear el catálogo de skins', 'Pantalla de la tienda', 'Probar compras sin dinero'] },
+  { name: 'Arreglar el bug del inicio de sesión', grep: 'token', files: ['README.md', 'auth.js', 'sesion.js', 'config.json', 'errores.txt'], newFiles: ['refresco.js', 'guardas.js'], main: 'auth.js', test: 'auth.test.js', cmd: 'npm test', steps: ['Reproducir el fallo', 'Encontrar dónde caduca el token', 'Renovar el token a tiempo', 'Test para que no vuelva'] },
+  { name: 'Crear la página de estadísticas', grep: 'partidas', files: ['README.md', 'api.js', 'stats.js', 'grafica.css', 'datos.json'], newFiles: ['Estadisticas.jsx', 'useStats.js'], main: 'stats.js', test: 'stats.test.js', cmd: 'npm test', steps: ['Ver qué datos hay', 'Diseñar las gráficas', 'Conectar con la API', 'Probar con datos vacíos'] },
+  { name: 'Refactorizar el sistema de economía', grep: 'precio', files: ['README.md', 'Economia.lua', 'Recompensas.lua', 'precios.json', 'ideas.txt'], newFiles: ['Monedero.lua', 'Precios.lua'], main: 'Economia.lua', test: 'economia.spec.lua', cmd: 'lune run tests', steps: ['Mapear quién toca las monedas', 'Separar el monedero', 'Unificar los precios', 'Comprobar que nada cambia'] },
+  { name: 'Pasar los estilos a tokens de diseño', grep: '#D97757', files: ['README.md', 'app.js', 'estilos.css', 'tema.json', 'notas.txt'], newFiles: ['tokens.css', 'tema.js'], main: 'estilos.css', test: 'tema.test.js', cmd: 'npm test', steps: ['Listar los colores sueltos', 'Definir los tokens', 'Sustituir en cada componente', 'Revisar modo oscuro'] },
+  { name: 'Traducir la app al inglés', grep: 't("', files: ['README.md', 'app.js', 'menu.js', 'es.json', 'textos.txt'], newFiles: ['en.json', 'i18n.js'], main: 'menu.js', test: 'i18n.test.js', cmd: 'npm test', steps: ['Encontrar textos sin traducir', 'Crear el archivo en.json', 'Selector de idioma', 'Probar las dos versiones'] },
+];
+function customTask(name) {
+  const word = (name.toLowerCase().match(/[a-záéíóúñ]{4,}/g) || ['app']).pop();
+  return { name, grep: word, files: ['README.md', 'app.js', 'utils.js', 'datos.json', 'notas.txt'], newFiles: ['cambios.js', word.slice(0, 12) + '.js'], main: 'app.js', test: 'app.test.js', cmd: 'npm test', steps: ['Entender lo que hay que hacer', 'Decidir qué archivos cambian', 'Escribir el código', 'Probarlo'] };
+}
+const exploreLines = t => ['$ git status', 'En la rama main · sin cambios', '$ ls src', t.files.filter(f => f !== 'README.md').join('  ')];
+const grepLines = t => [`$ grep -rn "${t.grep}" src`, `src/${t.files[1]}:14   …${t.grep}…`, `src/${t.files[2]}:52   …${t.grep}…`, '3 coincidencias en 2 archivos'];
+const planLines = t => ['# Plan', ...t.steps.map(s => '- ' + s), '', 'Agentes: explorar, código, tests'];
+
+/* ---------- Agentes ---------- */
+class Agent {
+  constructor(o) {
+    Object.assign(this, { name: o.name, role: o.role || '', color: o.color, scale: o.scale || 4, main: !!o.main });
+    this.w = 16 * this.scale; this.h = 11 * this.scale;
+    this.x = clamp(o.x ?? 440, 0, W - this.w); this.y = clamp(o.y ?? 300, 56, FLOOR - this.h);
+    Object.assign(this, { queue: [], step: null, t: rnd(0, 3), eye: 0, blinkT: rnd(1, 4), carry: null, act: 'Pensando', wins: {}, id: ++uid, alive: true, hop: 0, bubT: 0, glance: 2 });
+    this.pose = { legs: 0, arms: 'down' };
+    const el = this.el = document.createElement('div');
+    el.className = 'agent'; el.style.width = this.w + 'px'; el.style.setProperty('--h', this.h + 'px');
+    el.innerHTML = `<div class="bubble" hidden></div><span class="sh"></span><img alt="" draggable="false"><span class="tag" style="--c:${this.color}">${esc(this.name)}</span>`;
+    this.img = el.querySelector('img'); this.img.style.width = this.w + 'px'; this.img.style.height = this.h + 'px';
+    this.bub = el.querySelector('.bubble');
+    L.agents.appendChild(el); agents.push(this); this.render();
+  }
+  push(...s) { this.queue.push(...s.flat(Infinity)); return this; }
+  say(text, d = 2.4) {
+    this.bub.textContent = text; this.bub.hidden = false; this.bubT = d;
+    this.bubW = this.bub.offsetWidth;
+  }
+  update(dt) {
+    // En directo los eventos pueden llegar más rápido de lo que se animan: cuanta más cola, más prisa
+    if (live) {
+      dt *= Math.min(6, 1 + this.queue.length * .5);
+      if (this.queue.length > 40) this.queue = this.queue.filter((s, i) => i > 20 || !['walk', 'say', 'wait', 'type'].includes(s.t));
+      if (this.main && !this.step && !this.queue.length && (this.idleT = (this.idleT ?? 6) - dt) < 0) {
+        this.idleT = rnd(6, 12);
+        this.push({ t: 'walk', to: a => ({ x: a.x + rnd(-120, 120), y: a.y + rnd(-60, 60) }) });
+      }
+    }
+    this.t += dt; this.hop = 0;
+    this.blinkT -= dt; if (this.blinkT < -.14) this.blinkT = rnd(2, 5);
+    if (this.bubT > 0) { this.bubT -= dt; if (this.bubT <= 0) this.bub.hidden = true; }
+    this.pose = { legs: 0, arms: this.carry ? 'up' : 'down' };
+    if (!this.step && this.queue.length) {
+      const s = this.step = this.queue.shift(); s.e = 0;
+      if (s.act) this.act = s.act;
+      ACT[s.t].start?.(this, s);
+    }
+    if (this.step) {
+      const s = this.step; s.e += dt;
+      if (ACT[s.t].update(this, s, dt) && this.step === s) this.step = null;
+    } else if ((this.glance -= dt) < 0) { this.glance = rnd(1.5, 4); this.eye = pick([-1, 0, 0, 1]); }
+    this.render();
+  }
+  render() {
+    const src = sprite(this.color, { legs: this.pose.legs, eye: this.eye, blink: this.blinkT < 0, arms: this.pose.arms });
+    if (this._src !== src) { this.img.src = src; this._src = src; }
+    this.img.style.transform = this.hop ? `translateY(${-this.hop}px)` : '';
+    this.el.style.transform = `translate(${this.x}px,${this.y}px)`;
+    this.el.style.zIndex = 100 + Math.round(this.y);
+    this.el.classList.toggle('carrying', !!this.carry);
+    if (!this.bub.hidden && this.bubW) {
+      const left = this.x + this.w / 2 - this.bubW / 2, sx = clamp(left, 4, W - 4 - this.bubW) - left;
+      this.bub.style.transform = `translateX(calc(-50% + ${sx}px))`; this.bub.style.setProperty('--sx', sx + 'px');
+    }
+    if (this.carry) { this.carry.x = this.x + this.w / 2 - 38; this.carry.y = this.y - 52; this.carry.place(); }
+  }
+  remove(quiet) {
+    if (!this.alive) return; this.alive = false;
+    if (this.carry) { this.carry.remove(); this.carry = null; }
+    Object.values(this.wins).forEach(w => w.close());
+    if (!quiet) burst(this.x + this.w / 2, this.y + this.h / 2, this.color, 12);
+    this.el.remove(); agents.splice(agents.indexOf(this), 1);
+  }
+}
+function moveToward(a, tx, ty, dt) {
+  tx = clamp(tx, 0, W - a.w); ty = clamp(ty, 56, FLOOR - a.h);
+  const dx = tx - a.x, dy = ty - a.y, d = Math.hypot(dx, dy), v = (a.main ? 150 : 170) * dt;
+  if (d <= v) { a.x = tx; a.y = ty; return true; }
+  a.x += dx / d * v; a.y += dy / d * v;
+  a.eye = dx > 3 ? 1 : dx < -3 ? -1 : 0;
+  a.pose.legs = 1 + Math.floor(a.t * 9) % 2;
+  return false;
+}
+const WIN_TOOL = { term: 'Bash', code: 'Read', plan: 'Write', web: 'Preview' };
+
+/* Acciones que un agente sabe hacer: cada paso de su cola es una de estas */
+const ACT = {
+  walk: {
+    start(a, s) { s.tgt = s.to(a); },
+    update(a, s, dt) { if (s.follow) s.tgt = s.to(a); return !s.tgt || moveToward(a, s.tgt.x, s.tgt.y, dt); }
+  },
+  wait: { update: (a, s) => s.e >= s.d },
+  say: {
+    start(a, s) { a.say(typeof s.text === 'function' ? s.text(a) : s.text, s.d || 2.4); },
+    update: (a, s) => s.e >= (s.hold ?? .9)
+  },
+  call: { start(a, s) { s.fn(a); }, update: () => true },
+  open: {
+    start(a, s) { a.wins[s.key]?.close(); a.wins[s.key] = new Win(s.kind, s.title, a); log(a, WIN_TOOL[s.kind], s.title); },
+    update: (a, s) => s.e >= .45
+  },
+  type: {
+    start(a, s) { s.n = 0; s.next = .15; s.lines = typeof s.lines === 'function' ? s.lines() : s.lines; if (s.log) log(a, s.tool, s.log); },
+    update(a, s, dt) {
+      const w = a.wins[s.key]; if (!w || w.closed) return true;
+      a.eye = 0; a.pose.arms = Math.floor(a.t * 10) % 2 ? 'l' : 'r';
+      if ((s.next -= dt) > 0) return false;
+      if (s.n >= s.lines.length) return true;
+      w.focus(); w.add(s.lines[s.n++]); s.next = s.rate ?? rnd(.22, .45);
+      return false;
+    }
+  },
+  pick: {
+    start(a, s) {
+      const it = s.item(a);
+      if (!it || it.gone || it.carrier) { s.fail = true; return; }
+      it.home = { x: it.x, y: it.y }; it.carrier = a; a.carry = it; it.el.classList.add('held');
+      if (s.read) log(a, 'Read', it.name);
+    },
+    update: (a, s) => s.fail || s.e > .25
+  },
+  drop: {
+    start(a, s) {
+      const it = a.carry; if (!it) return;
+      a.carry = null; it.carrier = null; it.claimed = false;
+      const f = s.into?.(a);
+      if (f) { it.intoFolder(f); log(a, 'Bash', `mv ${it.name} ${f.name}/`); }
+      else { it.el.classList.remove('held'); Object.assign(it, it.home || { x: a.x, y: a.y }); it.place(); }
+    },
+    update: (a, s) => s.e > .3
+  },
+  close: { start(a, s) { a.wins[s.key]?.close(); delete a.wins[s.key]; }, update: () => true },
+  // Abre la ventana solo si no está ya abierta con ese título (se decide al ejecutarse, no al encolarse)
+  ensure: {
+    start(a, s) {
+      const w = a.wins[s.key];
+      if (w && !w.closed && w.title === s.title) return;
+      w?.close(); a.wins[s.key] = new Win(s.kind, s.title, a); s.opened = true;
+    },
+    update: (a, s) => !s.opened || s.e >= .35
+  },
+  clear: { start(a, s) { const w = a.wins[s.key]; if (w) { w.body.innerHTML = ''; w.n = 0; } }, update: () => true },
+  spawn: {
+    start(a, s) { const b = spawnSub(s.role, a); log(a, 'Agent', `${b.name}: ${ROLES[s.role].desc}`); },
+    update: (a, s) => s.e > .7
+  },
+  waitAgents: {
+    update(a, s, dt) {
+      const n = agents.filter(b => !b.main).length;
+      if (!n) return true;
+      a.act = `Coordinando a ${n} agente${n > 1 ? 's' : ''}`;
+      if ((s.k = (s.k ?? 1.5) - dt) <= 0) {
+        s.k = rnd(3.5, 6);
+        if (Math.random() < .55) a.say(pick(['¿Cómo vais?', 'Reviso lo que llega…', `Quedan ${n}.`, 'Mientras, leo el diff.', 'Apuntando cosas en el plan.']), 2);
+        s.wander = { x: a.x + rnd(-130, 130), y: a.y + rnd(-70, 70) };
+      }
+      if (s.wander && moveToward(a, s.wander.x, s.wander.y, dt)) s.wander = null;
+      return false;
+    }
+  },
+  cheer: {
+    update(a, s) { a.pose.arms = Math.floor(s.e * 5) % 2 ? 'up' : 'down'; a.hop = Math.abs(Math.sin(s.e * 7)) * 12; return s.e >= s.d; }
+  },
+  leave: { start(a) { a.remove(); }, update: () => true },
+};
+
+/* ---------- Roles de los subagentes ---------- */
+const ROLES = {
+  explorer: { label: 'Explorador', color: 'sky', desc: 'mapear el código' },
+  coder: { label: 'Programador', color: 'amber', desc: 'escribir el código' },
+  tester: { label: 'Tester', color: 'sage', desc: 'pasar los tests' },
+  reviewer: { label: 'Revisor', color: 'lilac', desc: 'revisar el resultado' },
+};
+function spawnSub(role, parent) {
+  const R = ROLES[role];
+  nameCounts[role] = (nameCounts[role] || 0) + 1;
+  const b = new Agent({ name: R.label + (nameCounts[role] > 1 ? ' ' + nameCounts[role] : ''), role: R.label, color: COLORS[R.color], scale: 3, x: parent.x + parent.w / 2 - 24 + rnd(-20, 20), y: parent.y + parent.h - 33 });
+  burst(b.x + b.w / 2, b.y + b.h / 2, b.color, 12);
+  stats.agents++;
+  b.push(SCRIPTS[role](b));
+  return b;
+}
+function besideMain(b) { return { x: main.x + (b.x < main.x ? -b.w - 6 : main.w + 6), y: main.y + main.h - b.h }; }
+function report(text) {
+  return [
+    { t: 'walk', to: besideMain, follow: true, act: 'Volviendo con Claude' },
+    { t: 'say', text, d: 2.4, hold: 1.6, act: 'Informando a Claude' },
+    { t: 'call', fn: b => { log(b, null, `informa: ${text}`); main.say(pick(['Perfecto, gracias.', 'Genial.', 'Buen trabajo.', 'Anotado.']), 1.8); progress = Math.min(progress + 12, 88); } },
+    { t: 'wait', d: .6 }, { t: 'leave' },
+  ];
+}
+const SCRIPTS = {
+  explorer() {
+    const steps = [{ t: 'say', text: 'Voy a mapear el código.', act: 'Mapeando el código' }];
+    for (let i = 0; i < 3; i++) {
+      let f;
+      steps.push(
+        { t: 'call', fn: () => { f = freeFile(); } },
+        { t: 'walk', to: b => nearItem(f, b), act: 'Buscando archivos' },
+        { t: 'pick', item: () => f, read: true },
+        { t: 'say', text: () => f ? `Leyendo ${f.name}` : 'Aquí ya no queda nada', d: 1.6, hold: 1.1, act: 'Leyendo archivos' },
+        { t: 'walk', to: b => f && nearItem(folderFor(f), b), act: 'Ordenando archivos' },
+        { t: 'drop', into: () => f && folderFor(f) },
+      );
+    }
+    return steps.concat(
+      { t: 'open', key: 't', kind: 'term', title: 'Terminal · búsqueda' },
+      { t: 'walk', to: atWin('t') },
+      { t: 'type', key: 't', lines: () => grepLines(task), tool: 'Grep', log: `"${task.grep}" en src/`, act: 'Buscando referencias' },
+      { t: 'wait', d: .8 }, { t: 'close', key: 't' },
+      report('Mapa listo: 3 sitios que tocar'),
+    );
+  },
+  coder() {
+    task._c = (task._c || 0) + 1;
+    const file = task.newFiles[(task._c - 1) % task.newFiles.length];
+    let nf;
+    return [
+      { t: 'say', text: `Me encargo de ${file}.`, act: `Escribiendo ${file}` },
+      { t: 'open', key: 'e', kind: 'code', title: file },
+      { t: 'walk', to: atWin('e') },
+      { t: 'type', key: 'e', lines: () => codeLines(7), tool: 'Write', log: file },
+      { t: 'walk', to: atWin('e') },
+      { t: 'say', text: pick(['Mejor así…', 'Esto se puede simplificar.', 'Falta un caso.']), d: 1.6, hold: .6 },
+      { t: 'type', key: 'e', lines: () => codeLines(4), tool: 'Edit', log: file },
+      { t: 'call', fn: b => { nf = new Item('file', file, b.x + b.w / 2 - 38, b.y - 56, true); } },
+      { t: 'wait', d: .4 },
+      { t: 'pick', item: () => nf },
+      { t: 'close', key: 'e' },
+      { t: 'walk', to: b => nearItem(folders.src, b), act: 'Guardando el archivo' },
+      { t: 'drop', into: () => folders.src },
+      report(`${file} escrito`),
+    ];
+  },
+  tester() {
+    const n = Math.floor(rnd(28, 46));
+    return [
+      { t: 'say', text: 'Paso los tests.', act: 'Ejecutando tests' },
+      { t: 'open', key: 't', kind: 'term', title: 'Terminal · tests' },
+      { t: 'walk', to: atWin('t') },
+      { t: 'type', key: 't', lines: [`$ ${task.cmd}`, `  ✓ ${n} pasan`, `  ✗ 2 fallan · ${task.test}`], tool: 'Bash', log: task.cmd },
+      { t: 'say', text: 'Dos fallan. Lo miro.', d: 2, hold: 1, act: 'Arreglando tests' },
+      { t: 'open', key: 'e', kind: 'code', title: task.test },
+      { t: 'walk', to: atWin('e') },
+      { t: 'type', key: 'e', lines: () => codeLines(4), tool: 'Edit', log: task.test },
+      { t: 'close', key: 'e' },
+      { t: 'walk', to: atWin('t'), act: 'Ejecutando tests' },
+      { t: 'type', key: 't', lines: [`$ ${task.cmd}`, `  ✓ ${n + 2} pasan · 0 fallan`], tool: 'Bash', log: task.cmd },
+      { t: 'say', text: '¡En verde!', d: 1.6, hold: .8 },
+      { t: 'close', key: 't' },
+      report('Tests en verde'),
+    ];
+  },
+  reviewer() {
+    return [
+      { t: 'say', text: 'Lo reviso en el navegador.', act: 'Revisando la vista previa' },
+      { t: 'open', key: 'w', kind: 'web', title: 'Vista previa · localhost:3000' },
+      { t: 'walk', to: atWin('w') },
+      { t: 'type', key: 'w', lines: ['nav', 'hero', 'cards', 'text', 'text', 'btn'], rate: .45, tool: 'Preview', log: 'captura de pantalla' },
+      { t: 'walk', to: atWin('w'), act: 'Mirando detalles' },
+      { t: 'say', text: pick(['El botón queda pequeño en móvil.', 'Falta contraste en el título.', 'Ese margen no cuadra.']), d: 2.2, hold: 1.4 },
+      { t: 'open', key: 'e', kind: 'code', title: 'estilos.css' },
+      { t: 'walk', to: atWin('e') },
+      { t: 'type', key: 'e', lines: CSS_LINES, tool: 'Edit', log: 'estilos.css' },
+      { t: 'close', key: 'e' }, { t: 'wait', d: .4 }, { t: 'close', key: 'w' },
+      report('Revisado y ajustado'),
+    ];
+  },
+};
+
+/* ---------- Guion de Claude (el agente principal) ---------- */
+const PLAN = ['Explorar el código', 'Escribir el plan', 'Repartir el trabajo entre agentes', 'Implementar y probar', 'Verificación final'];
+let planItems = [];
+function setPlan(i, st) { if (planItems[i]) planItems[i].st = st; renderPlan(); }
+function mainScript(t) {
+  let readme, f;
+  const roles = ['explorer', 'coder', 'tester', Math.random() < .6 ? 'reviewer' : 'coder'];
+  const total = Math.floor(rnd(36, 60));
+  return [
+    { t: 'call', fn: () => setPlan(0, 'run') },
+    { t: 'say', text: 'Vale, me pongo con esto.', act: 'Leyendo la tarea' },
+    { t: 'open', key: 'term', kind: 'term', title: 'Terminal', act: 'Explorando el repositorio' },
+    { t: 'walk', to: atWin('term') },
+    { t: 'type', key: 'term', lines: () => exploreLines(t), tool: 'Bash', log: 'git status · ls src' },
+    { t: 'type', key: 'term', lines: () => grepLines(t), tool: 'Grep', log: `"${t.grep}"` },
+    { t: 'call', fn: () => { readme = freeFile('README.md'); } },
+    { t: 'walk', to: a => nearItem(readme, a), act: 'Leyendo la documentación' },
+    { t: 'pick', item: () => readme, read: true },
+    { t: 'walk', to: () => ({ x: rnd(260, 560), y: rnd(220, 400) }) },
+    { t: 'say', text: () => readme ? `Leyendo ${readme.name}…` : 'Hmm, no hay README.', d: 2, hold: 1.8 },
+    { t: 'walk', to: a => readme?.home && nearItem({ x: readme.home.x, y: readme.home.y }, a) },
+    { t: 'drop' },
+    { t: 'call', fn: () => { setPlan(0, 'done'); setPlan(1, 'run'); progress = 12; } },
+    { t: 'open', key: 'plan', kind: 'plan', title: 'plan.md', act: 'Escribiendo el plan' },
+    { t: 'walk', to: atWin('plan') },
+    { t: 'type', key: 'plan', lines: () => planLines(t), tool: 'Write', log: 'plan.md', rate: .4 },
+    { t: 'call', fn: () => { setPlan(1, 'done'); setPlan(2, 'run'); progress = 22; } },
+    { t: 'say', text: 'Esto va más rápido en paralelo. Lanzo agentes.', d: 2.6, hold: 1.6, act: 'Repartiendo el trabajo' },
+    ...roles.flatMap(r => [{ t: 'spawn', role: r }, { t: 'wait', d: .5 }]),
+    { t: 'close', key: 'plan' },
+    { t: 'call', fn: () => { setPlan(2, 'done'); setPlan(3, 'run'); progress = 28; } },
+    { t: 'open', key: 'code', kind: 'code', title: t.main, act: `Editando ${t.main}` },
+    { t: 'walk', to: atWin('code') },
+    { t: 'type', key: 'code', lines: () => codeLines(6), tool: 'Edit', log: t.main },
+    { t: 'call', fn: () => { f = freeFile(); } },
+    { t: 'walk', to: a => nearItem(f, a), act: 'Ordenando el proyecto' },
+    { t: 'pick', item: () => f },
+    { t: 'walk', to: a => f && nearItem(folderFor(f), a) },
+    { t: 'drop', into: () => f && folderFor(f) },
+    { t: 'waitAgents', act: 'Coordinando a los agentes' },
+    { t: 'call', fn: () => { setPlan(3, 'done'); setPlan(4, 'run'); progress = 90; } },
+    { t: 'say', text: 'Todos han terminado. Lo compruebo todo junto.', d: 2.4, hold: 1.4, act: 'Verificación final' },
+    { t: 'walk', to: atWin('term') },
+    { t: 'type', key: 'term', lines: [`$ ${t.cmd}`, `  ✓ ${total} pasan · 0 fallan`, '$ git diff --stat', `  ${t.newFiles.length + 3} archivos cambiados`], tool: 'Bash', log: t.cmd },
+    { t: 'call', fn: a => { Object.keys(a.wins).forEach(k => a.wins[k].close()); a.wins = {}; } },
+    { t: 'call', fn: finishTask },
+    { t: 'say', text: '¡Tarea completada!', d: 3, hold: 0 },
+    { t: 'cheer', d: 2.4, act: 'Celebrando' },
+    { t: 'wait', d: 3.5, act: 'Preparando la siguiente tarea' },
+    { t: 'call', fn: () => startTask() },
+  ];
+}
+function finishTask() {
+  setPlan(4, 'done'); progress = 100; stats.done++;
+  setStatus('done'); confetti();
+  log(main, null, `tarea completada en ${fmt(taskT)}`);
+}
+function startTask(name) {
+  agents.filter(a => !a.main).forEach(a => a.remove(true));
+  main.queue.length = 0; main.step = null;
+  if (main.carry) { main.carry.remove(); main.carry = null; }
+  Object.values(main.wins).forEach(w => w.close()); main.wins = {};
+  wins.slice().forEach(w => w.close());
+  task = name ? customTask(name) : TASKS[presetIdx = (presetIdx + 1) % TASKS.length];
+  task._c = 0; nameCounts = {};
+  taskNum++; taskT = 0; progress = 0; shown = 0;
+  planItems = PLAN.map(text => ({ text, st: 'pending' })); renderPlan();
+  $('#taskName').textContent = task.name; $('#taskNum').textContent = '#' + taskNum;
+  setStatus('work');
+  resetDesktop(task.files);
+  main.push(mainScript(task));
+  log(main, null, `nueva tarea: ${task.name}`);
+}
+
+/* ---------- Panel lateral ---------- */
+const logEl = $('#log');
+const clockOf = ts => new Date(ts * 1000).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+function log(a, tool, text, ts) {
+  if (tool) stats.tools++;
+  const li = document.createElement('li');
+  li.innerHTML = `<time>${ts ? clockOf(ts) : fmt(elapsed)}</time><span class="who" style="--c:${a.color}">${esc(a.name)}</span>${tool ? `<code>${tool}</code>` : ''}<span class="txt">${esc(text)}</span>`;
+  logEl.prepend(li);
+  while (logEl.children.length > 60) logEl.lastChild.remove();
+}
+let planKey = '';
+function renderPlan() {
+  const key = JSON.stringify(planItems);
+  if (key === planKey) return;
+  planKey = key;
+  $('#plan').innerHTML = planItems.length
+    ? planItems.map(p => `<li class="${p.st}">${esc(p.text)}</li>`).join('')
+    : '<li class="none">Sin plan todavía</li>';
+}
+function setStatus(s) {
+  status = s;
+  const shownS = paused ? 'pause' : s;
+  $('#status').dataset.s = shownS;
+  $('#statusText').textContent = { work: 'Trabajando', pause: 'En pausa', done: 'Tarea completada', wait: 'Esperando tu mensaje', ask: 'Necesita tu respuesta', off: 'Sin conexión', idle: 'Sin actividad' }[shownS];
+}
+function renderSide() {
+  if (live) liveSide();
+  $('#bar').style.width = shown.toFixed(1) + '%';
+  $('#bar').parentElement.setAttribute('aria-valuenow', Math.round(shown));
+  $('#pct').textContent = Math.round(shown) + '%';
+  $('#times').textContent = live ? liveTimes() : `tarea ${fmt(taskT)} · sesión ${fmt(elapsed)}`;
+  if (live && !planItems.length) $('#pct').textContent = '—';
+  $('#stTools').textContent = stats.tools; $('#stFiles').textContent = stats.files;
+  $('#stAgents').textContent = stats.agents; $('#stDone').textContent = stats.done;
+  const subs = agents.filter(a => !a.main).length;
+  $('#agentCount').textContent = subs ? `${subs} en marcha` : 'solo Claude';
+  $('#roster').innerHTML = agents.map(a => `<li><img alt="" src="${sprite(a.color)}"><div style="min-width:0"><div class="rn">${esc(a.name)}<small>${a.main ? 'principal' : esc(a.role)}</small></div><div class="ra">${esc(a.act)}</div></div><span class="chip ${a.main ? 'lead' : 'on'}">${a.main ? 'dirige' : 'trabaja'}</span></li>`).join('');
+  const d = new Date(); $('#clock').textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+/* ---------- Controles ---------- */
+const btnPause = $('#btnPause');
+function togglePause() {
+  paused = !paused;
+  btnPause.textContent = paused ? 'Seguir' : 'Pausar';
+  $('#page').classList.toggle('paused', paused);
+  setStatus(status);
+}
+btnPause.addEventListener('click', togglePause);
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  speed = +b.dataset.speed;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+}));
+$('#btnAgent').addEventListener('click', () => {
+  if (agents.length > 7) { log(main, null, 'ya hay suficientes agentes trabajando'); return; }
+  const r = pick(Object.keys(ROLES));
+  const b = spawnSub(r, main);
+  log(main, 'Agent', `${b.name}: ${ROLES[r].desc} (a petición tuya)`);
+  main.say(`¡Bienvenido, ${b.name}!`, 1.8);
+});
+$('#taskForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('#taskInput').value.trim();
+  startTask(v || undefined);
+  $('#taskInput').value = '';
+});
+addEventListener('keydown', e => {
+  if (e.code === 'Space' && !/INPUT|BUTTON|TEXTAREA/.test(e.target.tagName)) { e.preventDefault(); togglePause(); }
+});
+
+/* ---------- En directo: lo que hacen de verdad tus sesiones (vía hooks + server.py) ---------- */
+const CAN_LIVE = /^https?:$/.test(location.protocol) && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+const sessions = new Map();
+const touched = new Set();
+let focus = null;
+const TYPE_NAME = { Explore: 'Explorador', Plan: 'Planificador', 'general-purpose': 'Agente', 'claude-code-guide': 'Guía' };
+const prettyType = t => TYPE_NAME[t] || (t ? t.replace(/[-_]/g, ' ').replace(/^\w/, c => c.toUpperCase()) : 'Agente');
+const roleOf = t => /explor|search|guide/i.test(t) ? 'explorer' : /plan|review|revis|audit/i.test(t) ? 'reviewer' : /test|qa|verif/i.test(t) ? 'tester' : 'coder';
+const shortProj = p => p.length > 16 ? p.slice(0, 15) + '…' : p;
+const nowS = () => Date.now() / 1000;
+
+function ensureSession(e) {
+  let s = sessions.get(e.sid);
+  if (!s) {
+    s = { sid: e.sid, proj: e.proj || 'sesión', subs: new Map(), pending: [], prompt: '', plan: [], last: e.ts, turnStart: e.ts, state: 'wait', tools: 0 };
+    sessions.set(e.sid, s);
+  }
+  s.last = e.ts;
+  return s;
+}
+function spawnMain(s) {
+  const n = [...sessions.values()].filter(x => x.main?.alive).length;
+  s.main = new Agent({ name: `Claude · ${shortProj(s.proj)}`, role: 'principal', color: COLORS.claude, scale: 4, main: true, x: 260 + n * 150, y: 280 + n * 30 });
+  s.main.act = s.state === 'work' ? 'Trabajando' : 'Esperando tu mensaje';
+  burst(s.main.x + 32, s.main.y + 22, COLORS.claude, 12);
+}
+function spawnLiveSub(s, id, atype, desc) {
+  const R = ROLES[roleOf(atype || '')], p = s.main;
+  const b = new Agent({ name: prettyType(atype), role: atype || 'agente', color: COLORS[R.color], scale: 3, x: p.x + p.w / 2 - 24 + rnd(-30, 30), y: p.y + p.h - 33 });
+  b.act = desc || 'Empezando'; b.session = s;
+  s.subs.set(id, b); stats.agents++;
+  burst(b.x + b.w / 2, b.y + b.h / 2, b.color, 12);
+  return b;
+}
+function actorFor(s, e) {
+  if (!s.main?.alive) spawnMain(s);
+  if (!e.agent) return s.main;
+  const b = s.subs.get(e.agent);
+  return b?.alive ? b : spawnLiveSub(s, e.agent, e.atype, s.pending.shift());
+}
+// Para el registro durante el historial, cuando aún no hay muñecos
+const ghost = (s, e) => e.agent ? { name: prettyType(e.atype), color: COLORS[ROLES[roleOf(e.atype || '')].color] } : { name: `Claude · ${shortProj(s.proj)}`, color: COLORS.claude };
+
+/* Iconos de archivo reales en la columna derecha del escritorio (5 huecos) */
+function fileIcon(name) {
+  const found = items.find(i => i.kind === 'file' && i.name === name && !i.gone);
+  if (found) return found;
+  const files = items.filter(i => i.kind === 'file' && !i.gone && !i.carrier);
+  const slots = [0, 1, 2, 3, 4].map(i => 16 + i * 86);
+  let y = slots.find(y => !files.some(f => Math.abs(f.y - y) < 10));
+  if (y === undefined) { const old = files[0]; y = old.y; old.remove(); }
+  return new Item('file', name, W - 90, y, true);
+}
+function winSteps(key, kind, title, act) {
+  return [{ t: 'ensure', key, kind, title, act }, { t: 'walk', to: a => nearWin(a, key) ? null : atWin(key)(a) }];
+}
+function nearWin(a, key) {
+  const w = a.wins[key];
+  return w && !w.closed && a.x > w.x - 10 && a.x + a.w < w.x + w.w + 10 && Math.abs(a.y + a.h - (w.y + w.h)) < 30;
+}
+function applyPlan(s, p) {
+  const st = { completed: 'done', in_progress: 'run' };
+  if (p.items) s.plan = p.items.map(i => ({ text: i.content || '…', st: st[i.status] || 'pending' }));
+  const L = s.plan;
+  if (p.advance) {
+    const r = L.findIndex(i => i.st === 'run');
+    if (r >= 0) L[r].st = 'done';
+    const n = L.findIndex(i => i.st === 'pending');
+    if (n >= 0) L[n].st = 'run';
+  }
+  (Array.isArray(p.done) ? p.done : []).forEach(i => L[i - 1] && (L[i - 1].st = 'done'));
+  if (typeof p.start === 'number' && L[p.start - 1]) L[p.start - 1].st = 'run';
+}
+
+/* Qué hace el muñeco con cada herramienta. Devuelve [pasos, texto del registro] */
+function toolSteps(e) {
+  const t = e.tool, f = e.file;
+  switch (t) {
+    case 'Bash': case 'PowerShell':
+      return [[...winSteps('term', 'term', 'Terminal', e.desc || 'En la terminal'), { t: 'type', key: 'term', lines: [`$ ${e.cmd}`], rate: .12 }], e.desc || e.cmd];
+    case 'Grep': case 'Glob':
+      return [[...winSteps('term', 'term', 'Terminal', `Buscando ${e.pat}`), { t: 'type', key: 'term', lines: [`$ ${t === 'Grep' ? 'grep' : 'find'} "${e.pat}"`], rate: .12 }], e.pat];
+    case 'Read': {
+      if (!f) break;
+      const it = fileIcon(f);
+      return [[
+        { t: 'walk', to: a => nearItem(it, a), act: `Leyendo ${f}` },
+        { t: 'pick', item: () => it },
+        { t: 'say', text: `Leyendo ${f}`, d: 1.6, hold: .7 },
+        { t: 'drop' },
+      ], f];
+    }
+    case 'Edit': case 'MultiEdit': case 'NotebookEdit': case 'Write': {
+      if (!f) break;
+      const snip = e.snip?.length ? e.snip : codeLines(3);
+      const steps = [...winSteps('code', 'code', f, `${t === 'Write' ? 'Escribiendo' : 'Editando'} ${f}`), { t: 'type', key: 'code', lines: snip, rate: .18 }];
+      if (t === 'Write') {
+        let nf;
+        steps.push(
+          { t: 'call', fn: a => { if (!items.some(i => i.name === f && !i.gone)) nf = new Item('file', f, a.x + a.w / 2 - 38, a.y - 56, true); } },
+          { t: 'pick', item: () => nf },
+          { t: 'walk', to: a => nf && nearItem(folderFor(nf), a) },
+          { t: 'drop', into: () => nf && folderFor(nf) },
+        );
+      }
+      return [steps, f];
+    }
+    case 'WebFetch': case 'WebSearch': {
+      const what = e.url || e.q || 'la web';
+      return [[...winSteps('web', 'web', `Navegador · ${what}`, `Mirando ${what}`), { t: 'clear', key: 'web' }, { t: 'type', key: 'web', lines: ['nav', 'hero', 'text', 'text'], rate: .2 }], what];
+    }
+    case 'Agent': case 'Task':
+      return [[{ t: 'say', text: `Lanzo a ${prettyType(e.atype)}: ${e.desc}`, d: 2.6, hold: 1, act: 'Lanzando un agente' }], `${prettyType(e.atype)} · ${e.desc}`];
+    case 'Skill':
+      return [[{ t: 'say', text: `Cargo la skill ${e.desc}`, d: 2, hold: .6, act: `Usando ${e.desc}` }], e.desc];
+    case 'AskUserQuestion':
+      return [[{ t: 'say', text: 'Te hago una pregunta…', d: 4, hold: .6, act: 'Esperando tu respuesta' }], 'pregunta'];
+    case 'SubagentHandback':
+      return [[{ t: 'say', text: 'Ya tengo el resultado.', d: 1.6, hold: .5 }], 'entrega el resultado'];
+  }
+  if (e.plan) return [[...winSteps('plan', 'plan', 'Plan', 'Actualizando el plan'), { t: 'clear', key: 'plan' }, { t: 'type', key: 'plan', lines: () => ['# Plan', ...planLinesOf(e.sid)], rate: .12 }], 'actualiza el plan'];
+  const short = t.startsWith('mcp__') ? t.split('__').pop().replace(/_/g, ' ') : t;
+  return [[{ t: 'say', text: short, d: 1.4, hold: .5, act: `Usando ${short}` }], f || e.desc || ''];
+}
+const planLinesOf = sid => (sessions.get(sid)?.plan || []).map(i => (i.st === 'done' ? '✓ ' : i.st === 'run' ? '▸ ' : '- ') + i.text);
+const TOOL_LABEL = t => t.startsWith('mcp__') ? t.split('__').pop().replace(/_/g, ' ').slice(0, 20) : t;
+
+function onEvent(e, animate) {
+  if (!e || !e.sid) return;
+  const s = ensureSession(e);
+  if (animate || !focus) focus = s;
+  if (e.ev === 'SessionEnd') {
+    s.subs.forEach(b => b.remove()); s.main?.remove();
+    sessions.delete(e.sid); if (focus === s) focus = [...sessions.values()].pop() || null;
+    log(ghost(s, e), null, 'cierra la sesión', e.ts);
+    return;
+  }
+  const a = animate ? actorFor(s, e) : null;
+  const who = a || ghost(s, e);
+  switch (e.ev) {
+    case 'SessionStart':
+      log(who, null, 'sesión abierta', e.ts);
+      a?.push({ t: 'say', text: '¡Hola!', d: 1.6, hold: .4 });
+      break;
+    case 'UserPromptSubmit':
+      s.turnStart = e.ts; s.state = 'work';
+      // Avisos internos (un agente que termina, un recordatorio…) también llegan como "prompt"
+      if (/^\s*</.test(e.prompt || '')) { log(who, null, 'recibe un aviso interno', e.ts); a?.push({ t: 'say', text: 'Me llega un aviso.', d: 1.4, hold: .3 }); break; }
+      s.prompt = e.prompt;
+      log({ name: 'Tú', color: 'var(--ink)' }, null, e.prompt, e.ts);
+      a?.push({ t: 'say', text: pick(['¡Vamos!', 'Me pongo con ello.', 'Entendido.', 'Vale, a ello.']), d: 1.8, hold: .6, act: 'Leyendo tu mensaje' });
+      break;
+    case 'PreToolUse': {
+      s.tools++; s.state = 'work';
+      if (e.file) touched.add(e.file);
+      if (e.plan) applyPlan(s, e.plan);
+      if (e.tool === 'Agent' || e.tool === 'Task') s.pending.push(e.desc);
+      const [steps, text] = toolSteps(e);
+      log(who, TOOL_LABEL(e.tool), text, e.ts);
+      if (a) { if (steps[0] && !steps[0].act) steps[0].act = `${e.tool}${text ? ': ' + text : ''}`; a.push(steps); }
+      break;
+    }
+    case 'PostToolUse': case 'PostToolUseFailure':
+      if (e.err) {
+        log(who, null, `${e.tool} falló`, e.ts);
+        a?.push({ t: 'say', text: 'Uy, eso falló. Pruebo otra cosa.', d: 2, hold: .6 });
+        if (a?.wins.term && e.tool === 'Bash') a.push({ t: 'type', key: 'term', lines: ['✗ error'], rate: .1 });
+      } else if (a?.wins.term && (e.tool === 'Bash' || e.tool === 'PowerShell')) a.push({ t: 'type', key: 'term', lines: ['✓ hecho'], rate: .1 });
+      break;
+    case 'SubagentStart':
+      log(who, 'Agent', `empieza${e.atype ? ' (' + e.atype + ')' : ''}`, e.ts);
+      break;
+    case 'SubagentStop': {
+      log(who, null, 'termina y entrega su trabajo', e.ts);
+      if (a && !a.main) {
+        a.push(
+          { t: 'walk', to: b => s.main?.alive ? { x: s.main.x + (b.x < s.main.x ? -b.w - 6 : s.main.w + 6), y: s.main.y + s.main.h - b.h } : null, follow: true, act: 'Volviendo con Claude' },
+          { t: 'say', text: '¡Terminado!', d: 1.6, hold: 1 },
+          { t: 'call', fn: () => { s.main?.say(pick(['Gracias.', 'Perfecto.', 'Genial.']), 1.6); s.subs.delete(e.agent); } },
+          { t: 'wait', d: .4 }, { t: 'leave' },
+        );
+      }
+      break;
+    }
+    case 'Notification':
+      s.state = 'ask';
+      log(who, null, e.msg || 'te necesita', e.ts);
+      a?.push({ t: 'say', text: e.msg || 'Te necesito un momento', d: 5, hold: .6, act: 'Esperando tu respuesta' });
+      break;
+    case 'Stop':
+      s.state = 'wait'; stats.done++;
+      log(who, null, 'termina el turno', e.ts);
+      if (a) {
+        a.push(
+          { t: 'call', fn: b => { Object.values(b.wins).forEach(w => w.close()); b.wins = {}; } },
+          { t: 'say', text: '¡Listo! Te toca.', d: 3, hold: 0, act: 'Esperando tu mensaje' },
+          { t: 'cheer', d: 1.6 },
+        );
+      }
+      break;
+  }
+}
+function liveTimes() {
+  if (!focus) return 'sin sesiones activas';
+  return `turno ${fmt(Math.max(0, (focus.state === 'work' ? nowS() : focus.last) - focus.turnStart))} · ${focus.tools} herramientas`;
+}
+function liveSide() {
+  // Las sesiones que llevan 30 min sin hacer nada se van del escritorio
+  for (const s of sessions.values()) if (s.main?.alive && s.state !== 'work' && nowS() - s.last > 1800) { s.subs.forEach(b => b.remove()); s.main.remove(); }
+  const s = focus;
+  $('#taskName').textContent = s ? (s.prompt || 'Esperando tu mensaje') : 'Esperando actividad: usa Claude Code en cualquier sesión y aparecerá aquí.';
+  $('#taskNum').textContent = s ? s.proj : '';
+  planItems = s ? s.plan : [];
+  renderPlan();
+  const done = planItems.filter(i => i.st === 'done').length;
+  progress = planItems.length ? done / planItems.length * 100 : 0;
+  stats.files = touched.size;
+  if (!paused && status !== 'off') setStatus(s ? s.state : 'idle');
+}
+function startLive() {
+  live = true;
+  $('#mode').textContent = 'EN DIRECTO'; $('#mode').classList.add('on');
+  $('#btnAgent').hidden = true; $('#taskForm').hidden = true;
+  $('#stDoneLabel').textContent = 'turnos terminados';
+  $('#hint').textContent = 'En directo: cada muñeco es una de tus sesiones de Claude Code o uno de sus agentes. Barra espaciadora: pausar o seguir.';
+  $('#taskName').textContent = 'Conectando…';
+  setStatus('idle');
+  const es = new EventSource('/events');
+  es.addEventListener('replay', m => { try { onEvent(JSON.parse(m.data), false); } catch {} });
+  es.addEventListener('ready', () => {
+    if (status === 'off') setStatus('idle');
+    for (const s of sessions.values()) if (!s.main?.alive && nowS() - s.last < 1800) spawnMain(s);
+  });
+  es.onmessage = m => { try { onEvent(JSON.parse(m.data), true); } catch (err) { console.error(err); } };
+  es.onerror = () => setStatus('off');
+  es.onopen = () => { if (status === 'off') setStatus('idle'); };
+}
+
+/* ---------- Arranque y bucle ---------- */
+if (CAN_LIVE) startLive();
+else {
+  main = new Agent({ name: 'Claude', role: 'principal', color: COLORS.claude, scale: 4, main: true, x: 450, y: 300 });
+  startTask();
+}
+let last = performance.now(), sideT = 0;
+function frame(now) {
+  let dt = Math.min(.1, (now - last) / 1000); last = now;
+  if (!paused) {
+    dt *= speed; elapsed += dt;
+    if (status !== 'done') taskT += dt;
+    agents.slice().forEach(a => a.alive && a.update(dt));
+    shown += (progress - shown) * Math.min(1, dt * 3);
+  }
+  if ((sideT -= dt) <= 0) { sideT = .25; renderSide(); }
+  requestAnimationFrame(frame);
+}
+renderSide();
+requestAnimationFrame(frame);
+})();
+</script>
