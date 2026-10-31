@@ -1,0 +1,15 @@
+{
+  "description": "Apunta lo que hacen Claude y sus agentes en ~/.claude/oficina/events.jsonl para La oficina de Claude",
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "PostToolUseFailure": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "SubagentStart": [{ "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "SubagentStop": [{ "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "Notification": [{ "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hook.py\"", "async": true, "timeout": 10 }] }]
+  }
+}
