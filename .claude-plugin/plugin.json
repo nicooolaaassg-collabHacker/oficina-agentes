@@ -1,0 +1,10 @@
+{
+  "name": "oficina-agentes",
+  "version": "0.1.0",
+  "description": "Mira en directo a Claude Code y sus agentes trabajando en un ordenador pixel art",
+  "author": { "name": "nicooolaaassg-collabHacker" },
+  "homepage": "https://github.com/nicooolaaassg-collabHacker/oficina-agentes",
+  "repository": "https://github.com/nicooolaaassg-collabHacker/oficina-agentes",
+  "license": "MIT",
+  "keywords": ["visualización", "agentes", "hooks", "pixel-art"]
+}

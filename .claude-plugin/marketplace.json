@@ -1,0 +1,16 @@
+{
+  "name": "oficina-agentes",
+  "owner": {
+    "name": "nicooolaaassg-collabHacker"
+  },
+  "metadata": {
+    "description": "La oficina de Claude: Claude Code y sus agentes trabajando en directo, en pixel art"
+  },
+  "plugins": [
+    {
+      "name": "oficina-agentes",
+      "source": "./",
+      "description": "Mira en directo a Claude Code y sus agentes trabajando en un ordenador pixel art"
+    }
+  ]
+}
