@@ -1433,7 +1433,12 @@ function activityOf(a, o) {
   let s = a.step;
   if (s && s.t === 'walk' && !s.follow && a.queue[0]) s = a.queue[0];   // si va de camino, adónde va
   if (s?.t === 'leave') return 'door';
-  if (s?.t === 'walk' && s.follow && !a.main) return 'jefe';            // vuelve con quien le lanzó
+  // Al terminar, el agente va a la mesa de quien le lanzó y le entrega el trabajo antes de irse.
+  // En la pantalla ese paseo dura un instante (ya está al lado), así que aquí se mantiene hasta llegar.
+  const cierre = !s || ['say', 'call', 'wait'].includes(s.t) || (s.t === 'walk' && s.follow);
+  if (!cierre) { o.entregando = o.entregado = false; o.espera = 0; }
+  if (s?.t === 'walk' && s.follow && !a.main) o.entregando = true;
+  if (o.entregando && !a.main) return 'jefe';   // entrega y se queda con él hasta irse
   if (a.carry || s?.t === 'pick' || s?.t === 'drop') return 'archivo';
   if (s && ['type', 'ensure', 'open', 'clear'].includes(s.t)) {
     const k = s.key || s.kind;
@@ -1468,12 +1473,14 @@ function officeUpdate(dt) {
   for (const [id, o] of oActors) {
     const a = o.agent;
     o.act = activityOf(a, o);
+    if (o.act === 'door' && o.entregando && !o.entregado) o.act = 'jefe';   // primero entrega, luego se va
     const tg = targetOf(o);
     const dx = tg.x - o.x, dy = tg.y - o.y, d = Math.hypot(dx, dy), v = 150 * dt;
     o.t += dt; o.legs = 0;
     if (d > v) { o.x += dx / d * v; o.y += dy / d * v; o.legs = 1 + Math.floor(o.t * 9) % 2; o.face = dx > 3 ? 1 : dx < -3 ? -1 : 0; }
     else { o.x = tg.x; o.y = tg.y; o.face = 0; }
     o.here = d <= v;
+    if (o.act === 'jefe' && o.here && o.entregando && (o.espera = (o.espera || 0) + dt) > 1.4) o.entregado = true;
     if (o.act === 'door' && o.here) { oActors.delete(id); deskOf.delete(o); }
   }
 }
@@ -1569,7 +1576,7 @@ function drawActor(c, o) {
   label(c, a.name, o.x, o.y + 6, '#fff', 'rgba(8,14,20,.72)', a.color);
 }
 function drawBubble(c, o) {
-  const a = o.agent; if (a.bub.hidden) return;
+  const a = o.agent; if (!a.alive || a.bub.hidden) return;
   let t = a.bub.textContent; if (t.length > 42) t = t.slice(0, 41) + '…';
   if (privado()) t = '•••';
   c.font = '700 11px "Atkinson Hyperlegible", sans-serif';
