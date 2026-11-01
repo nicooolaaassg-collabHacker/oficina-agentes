@@ -7,6 +7,7 @@ Events) lo que el hook va escribiendo en ~/.claude/oficina/events.jsonl.
 Uso:  python3 scripts/server.py [puerto]   (o /oficina desde Claude Code)
 """
 import http.server
+import json
 import os
 import sys
 import time
@@ -14,9 +15,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = Path.home() / ".claude" / "oficina" / "events.jsonl"
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 4545))
+CONFIG = Path.home() / ".claude" / "oficina" / "config.json"
+
+
+def config():
+    try:
+        return json.loads(CONFIG.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("OFICINA_PORT") or config().get("port") or 4545)
+# macOS solo deja usar puertos por debajo de 1024 sin permisos escuchando en todas las redes;
+# en ese caso se sigue atendiendo únicamente a este ordenador (ver allowed)
+BIND = "0.0.0.0" if PORT < 1024 else "127.0.0.1"
+HOSTS = {"localhost", "127.0.0.1", str(os.environ.get("OFICINA_HOST") or config().get("host") or "").lower()}
 REPLAY = 400
-HEAD = b'<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+# La meta "oficina-live" le dice a la página que está servida por este servidor (modo en directo)
+HEAD = b'<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="oficina-live" content="1">\n'
 
 
 def size():
@@ -42,7 +58,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+    def allowed(self):
+        # Solo este ordenador, y solo con un nombre conocido (evita que una web ajena lea la oficina)
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]").lower()
+        local = self.client_address[0] in ("127.0.0.1", "::1")
+        return local and (host in HOSTS or host.endswith(".localhost"))
+
     def do_GET(self):
+        if not self.allowed():
+            self.send_error(403)
+            return
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
             body = HEAD + (ROOT / "index.html").read_bytes()
@@ -102,7 +127,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    server = http.server.ThreadingHTTPServer((BIND, PORT), Handler)
     server.daemon_threads = True
     print(f"La oficina de Claude: http://localhost:{PORT}  (Ctrl+C para parar)")
     try:
