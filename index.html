@@ -901,7 +901,8 @@ addEventListener('keydown', e => {
 });
 
 /* ---------- En directo: lo que hacen de verdad tus sesiones (vía hooks + server.py) ---------- */
-const CAN_LIVE = /^https?:$/.test(location.protocol) && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+// server.py marca la página; así el modo en directo funciona con cualquier nombre (oficina.localhost, uno propio…)
+const CAN_LIVE = !!document.querySelector('meta[name="oficina-live"]');
 const sessions = new Map();
 const touched = new Set();
 let focus = null;
@@ -1056,6 +1057,8 @@ function onEvent(e, animate) {
       s.tools++; s.state = 'work';
       if (e.file) touched.add(e.file);
       if (e.plan) applyPlan(s, e.plan);
+      // Al cerrar el turno con wrap_up, Claude da por terminado el paso en curso
+      if (/(^|__)wrap_up$/.test(e.tool)) s.plan.forEach(i => { if (i.st === 'run') i.st = 'done'; });
       if (e.tool === 'Agent' || e.tool === 'Task') s.pending.push(e.desc);
       const [steps, text] = toolSteps(e);
       log(who, TOOL_LABEL(e.tool), text, e.ts);
