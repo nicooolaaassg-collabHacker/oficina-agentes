@@ -63,6 +63,16 @@ En Codex, pídeselo: «abre la oficina» (usa la skill `oficina` del plugin).
 
 Se abre `http://oficina.localhost:4545` en tu navegador (si no carga, usa `http://localhost:4545`). Esa dirección solo existe en tu ordenador mientras la oficina está en marcha. Déjala abierta y sigue trabajando con Claude Code como siempre: cualquier sesión que abras, de Claude Code o de Codex, aparecerá en la oficina.
 
+### Claude y Codex trabajando juntos
+
+Si tienes los dos instalados, Claude puede repartir una tarea con Codex:
+
+```
+/con-codex haz una calculadora en Python; tú el código y Codex los tests
+```
+
+Claude elige una parte que Codex pueda hacer solo (tests, una investigación, una revisión…), se la encarga, hace la suya mientras tanto y al final junta y comprueba el trabajo de los dos. En la oficina ves al naranja y al turquesa trabajando a la vez. Gasta de los dos planes: el de Claude y el de ChatGPT.
+
 Si prefieres arrancarla a mano, desde la carpeta del plugin:
 
 ```bash
@@ -118,6 +128,7 @@ Si tenías la oficina abierta, cierra el servidor con `pkill -f "oficina.*server
 | `scripts/server.py` | Sirve la página y le envía los eventos nuevos en directo (Server-Sent Events) |
 | `scripts/start.py` | Arranca el servidor en segundo plano si no está en marcha y abre el navegador |
 | `commands/oficina.md` | El comando `/oficina` |
+| `commands/con-codex.md` | El comando `/con-codex`, para repartir una tarea con Codex |
 | `codex/skills/oficina/SKILL.md` | La skill para abrir la oficina desde Codex |
 | `.codex-plugin/plugin.json` | Lo que necesita Codex para instalar el plugin |
 | `index.html` | La oficina. Si la abres sin servidor, enseña una simulación con tareas de ejemplo |
@@ -126,7 +137,7 @@ Los hooks van en segundo plano (`async`), así que no ralentizan tus sesiones.
 
 ## English
 
-**Claude's Office** is an unofficial community Claude Code plugin (not made or endorsed by Anthropic) that shows your Claude Code and Codex sessions and their subagents working live, as pixel-art characters moving around a desktop. Install it with `/plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/oficina-agentes`, (in Codex: `codex plugin marketplace add nicooolaaassg-collabHacker/oficina-agentes`, `codex plugin add oficina-agentes@oficina-agentes`, then approve its hooks with `/hooks` and `t`), then type `/oficina` (or ask Codex to "abre la oficina") to open `http://oficina.localhost:4545` on your own machine (address configurable in `~/.claude/oficina/config.json`). Everything stays on your machine: events are logged to `~/.claude/oficina/events.jsonl` and the server only answers requests from your own computer. The interface is in Spanish.
+**Claude's Office** is an unofficial community Claude Code plugin (not made or endorsed by Anthropic) that shows your Claude Code and Codex sessions and their subagents working live, as pixel-art characters moving around a desktop. Install it with `/plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/oficina-agentes`, (in Codex: `codex plugin marketplace add nicooolaaassg-collabHacker/oficina-agentes`, `codex plugin add oficina-agentes@oficina-agentes`, then approve its hooks with `/hooks` and `t`), then type `/oficina` (or ask Codex to "abre la oficina") to open `http://oficina.localhost:4545` on your own machine (address configurable in `~/.claude/oficina/config.json`). With both installed, `/con-codex <task>` lets Claude hand part of a task to Codex and work alongside it. Everything stays on your machine: events are logged to `~/.claude/oficina/events.jsonl` and the server only answers requests from your own computer. The interface is in Spanish.
 
 ## Licencia
 
