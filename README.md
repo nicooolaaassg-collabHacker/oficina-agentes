@@ -13,7 +13,12 @@ Cada sesión de Claude Code es un muñeco naranja y cada sesión de Codex, uno t
 - cuando un agente termina, vuelve con quien lo lanzó, le entrega el trabajo y se va,
 - al acabar el turno, cierra las ventanas, celebra y espera tu mensaje.
 
-A la derecha tienes tu último mensaje, el plan (cuando hay uno), qué está haciendo cada agente y un registro con cada herramienta que usan.
+Hay dos vistas, que se cambian arriba con **Pantalla** / **Oficina**:
+
+- **Pantalla:** el ordenador pixel art de siempre, con sus ventanas.
+- **Oficina:** la oficina vista desde arriba. Cada agente tiene su mesa con monitor; va a la estantería cuando lee archivos, a la pizarra cuando toca el plan, a la pantalla de internet cuando navega, al café cuando espera tu mensaje, y entra y sale por la puerta.
+
+A la derecha tienes tu último mensaje, el plan (cuando hay uno), qué está haciendo cada agente y un registro con cada herramienta que usan, con buscador y un filtro de solo fallos. Si tienes varias sesiones abiertas, eliges cuál sigue el panel; si una herramienta falla, el aviso se queda a la vista hasta que vuelve a ir bien.
 
 ## Instalación
 
@@ -103,6 +108,9 @@ Todo se queda en tu ordenador:
 - El servidor solo atiende a tu propio ordenador: rechaza las peticiones que llegan de otros equipos o con un nombre que no conoce, así que nadie de fuera puede abrir la página.
 - No se envía nada a internet. La página solo descarga las tipografías de Google Fonts.
 
+- El botón **Ocultar textos** difumina en pantalla tus mensajes, comandos y código (útil si compartes pantalla).
+- Para que ni siquiera se apunten, añade `"privado": true` a `~/.claude/oficina/config.json`: entonces no se guardan tus mensajes, ni el código, ni las búsquedas, y de cada comando solo el nombre del programa.
+
 Para borrar todo lo apuntado: `rm -rf ~/.claude/oficina`.
 
 ## Desinstalar
@@ -137,7 +145,7 @@ Los hooks van en segundo plano (`async`), así que no ralentizan tus sesiones.
 
 ## English
 
-**Claude's Office** is an unofficial community Claude Code plugin (not made or endorsed by Anthropic) that shows your Claude Code and Codex sessions and their subagents working live, as pixel-art characters moving around a desktop. Install it with `/plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/oficina-agentes`, (in Codex: `codex plugin marketplace add nicooolaaassg-collabHacker/oficina-agentes`, `codex plugin add oficina-agentes@oficina-agentes`, then approve its hooks with `/hooks` and `t`), then type `/oficina` (or ask Codex to "abre la oficina") to open `http://oficina.localhost:4545` on your own machine (address configurable in `~/.claude/oficina/config.json`). With both installed, `/con-codex <task>` lets Claude hand part of a task to Codex and work alongside it. Everything stays on your machine: events are logged to `~/.claude/oficina/events.jsonl` and the server only answers requests from your own computer. The interface is in Spanish.
+**Claude's Office** is an unofficial community Claude Code plugin (not made or endorsed by Anthropic) that shows your Claude Code and Codex sessions and their subagents working live, as pixel-art characters moving around a desktop, or seen from above in an office with one desk per agent. Install it with `/plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/oficina-agentes`, (in Codex: `codex plugin marketplace add nicooolaaassg-collabHacker/oficina-agentes`, `codex plugin add oficina-agentes@oficina-agentes`, then approve its hooks with `/hooks` and `t`), then type `/oficina` (or ask Codex to "abre la oficina") to open `http://oficina.localhost:4545` on your own machine (address configurable in `~/.claude/oficina/config.json`). With both installed, `/con-codex <task>` lets Claude hand part of a task to Codex and work alongside it. Everything stays on your machine: events are logged to `~/.claude/oficina/events.jsonl` and the server only answers requests from your own computer. The interface is in Spanish.
 
 ## Licencia
 
