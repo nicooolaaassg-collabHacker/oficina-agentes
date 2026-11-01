@@ -90,6 +90,16 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
 
 /* Vista de oficina: la misma actividad, vista desde arriba en una oficina con mesas */
 .officeRoom{padding:clamp(10px,2vw,22px)}
+/* Cronología: una fila por agente y un bloque por herramienta */
+.timeRoom{padding:clamp(10px,2vw,22px)}
+.tlbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:10px}
+.tlleyenda{display:flex;flex-wrap:wrap;gap:6px 12px;font:600 12px var(--f-mono);color:var(--ink)}
+.tlleyenda span{display:inline-flex;align-items:center;gap:5px}
+.tlleyenda i{width:12px;height:12px;border-radius:2px;background:var(--c)}
+.tlwrap{position:relative}
+#tlCanvas{display:block;width:100%;height:auto;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15)}
+.tltip{position:absolute;z-index:5;max-width:320px;pointer-events:none;font:13px/1.35 var(--f-body);color:#17202A;background:#fff;border:2px solid #17222C;border-radius:8px;padding:6px 9px;box-shadow:3px 3px 0 rgba(0,0,0,.25)}
+.tltip b{font-family:var(--f-mono);font-size:12px}
 #officeCanvas{display:block;width:100%;height:auto;aspect-ratio:960/560;border-radius:10px;image-rendering:pixelated;box-shadow:0 10px 30px rgba(0,0,0,.15)}
 
 /* Escritorio dentro de la pantalla */
@@ -242,6 +252,7 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
     <div class="seg" role="group" aria-label="Vista">
       <button type="button" data-view="pantalla" aria-pressed="true">Pantalla</button>
       <button type="button" data-view="oficina" aria-pressed="false">Oficina</button>
+      <button type="button" data-view="cronologia" aria-pressed="false">Cronología</button>
     </div>
     <button class="btn" id="btnPrivado" type="button" aria-pressed="false" title="Difumina tus mensajes, comandos y código en pantalla">Ocultar textos</button>
     <button class="btn" id="btnAgent" type="button">+ Lanzar agente</button>
@@ -253,7 +264,7 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
   </div>
 
   <main class="app">
-    <section class="room" aria-label="Escena del ordenador">
+    <section class="room" id="screenRoom" aria-label="Escena del ordenador">
       <div class="room-inner">
         <div class="monitor">
           <div class="screen" id="screen">
@@ -276,6 +287,18 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
     </section>
     <section class="room officeRoom" id="officeRoom" aria-label="La oficina vista desde arriba" hidden>
       <canvas id="officeCanvas" width="1920" height="1120"></canvas>
+    </section>
+    <section class="room timeRoom" id="timeRoom" aria-label="Cronología: qué herramienta usó cada agente y cuándo" hidden>
+      <div class="tlbar">
+        <div class="seg" role="group" aria-label="Ventana de tiempo">
+          <button type="button" data-win="60" aria-pressed="false">1 min</button>
+          <button type="button" data-win="300" aria-pressed="true">5 min</button>
+          <button type="button" data-win="900" aria-pressed="false">15 min</button>
+          <button type="button" data-win="3600" aria-pressed="false">1 h</button>
+        </div>
+        <div class="tlleyenda" id="tlLeyenda"></div>
+      </div>
+      <div class="tlwrap"><canvas id="tlCanvas" width="1920" height="400"></canvas><div class="tltip" id="tlTip" hidden></div></div>
     </section>
 
     <aside class="side">
@@ -844,6 +867,7 @@ function mainScript(t) {
 }
 function finishTask() {
   setPlan(4, 'done'); progress = 100; stats.done++;
+  tlMark('sim', 'fin', 'tarea completada');
   setStatus('done'); confetti();
   log(main, null, `tarea completada en ${fmt(taskT)}`);
 }
@@ -862,6 +886,7 @@ function startTask(name) {
   resetDesktop(task.files);
   main.push(mainScript(task));
   log(main, null, `nueva tarea: ${task.name}`);
+  tlMark('sim', 'prompt', task.name);
 }
 
 /* ---------- Panel lateral ---------- */
@@ -872,6 +897,12 @@ function log(a, tool, text, ts) {
   const li = document.createElement('li');
   li.innerHTML = `<time>${ts ? clockOf(ts) : fmt(elapsed)}</time><span class="who" style="--c:${a.color}">${esc(a.name)}</span>${tool ? `<code>${tool}</code>` : ''}<span class="txt">${esc(text)}</span>`;
   if (/falló/.test(text)) li.classList.add('err');
+  // En la simulación la cronología se alimenta del registro (en directo, de los eventos)
+  if (!live && tool && a.id) {
+    const lane = tlLane('sim|' + a.id, 'sim', a.name, a.color, !a.main);
+    if (lane.last && lane.last.t1 == null) lane.last.t1 = Math.min(elapsed, lane.last.t0 + 6);
+    tlPush(lane.last = { lane, tool, cat: catOf(tool), text, t0: elapsed, t1: null });
+  }
   filtrarUno(li);
   logEl.prepend(li);
   while (logEl.children.length > 200) logEl.lastChild.remove();
@@ -1110,6 +1141,7 @@ function onEvent(e, animate) {
   }
   const a = animate ? actorFor(s, e) : null;
   const who = a || ghost(s, e);
+  tlEvent(e, s, who);
   switch (e.ev) {
     case 'SessionStart':
       log(who, null, 'sesión abierta', e.ts);
@@ -1242,6 +1274,128 @@ function startLive() {
   es.onerror = () => { if (status !== 'off') offDesde = nowS(); setStatus('off'); };
   es.onopen = () => { offDesde = 0; if (status === 'off') setStatus('idle'); };
 }
+
+/* ---------- Cronología: qué herramienta usó cada agente y cuándo ----------
+   Una fila por agente (el principal arriba) y un bloque por herramienta, de su inicio a su final.
+   En directo los tramos salen de PreToolUse/PostToolUse; en la simulación, del registro. */
+const TL_CATS = {
+  terminal: ['Terminal', '#2C8452'], leer: ['Leer', '#3E6FD8'], editar: ['Editar', '#8455C8'], web: ['Web', '#1E9BBE'],
+  plan: ['Plan', '#E2A443'], agentes: ['Agentes', '#E07F9C'], otros: ['Otras', '#8A939C'],
+};
+function catOf(tool, plan) {
+  if (plan) return 'plan';
+  if (/^(Bash|PowerShell|Grep|Glob)$/.test(tool)) return 'terminal';
+  if (tool === 'Read') return 'leer';
+  if (/^(Edit|MultiEdit|Write|NotebookEdit)$/.test(tool)) return 'editar';
+  if (/^(WebFetch|WebSearch|Preview)$/.test(tool) || /browser|chrome|navigate|web/i.test(tool)) return 'web';
+  if (/^(Agent|Task|WaitAgent|SubagentHandback)$/.test(tool)) return 'agentes';
+  if (/plan|todo/i.test(tool)) return 'plan';
+  return 'otros';
+}
+const tl = [], tlMarks = [], tlLanes = new Map(), tlOpen = new Map();
+const tlNow = () => live ? nowS() : elapsed;
+function tlLane(key, sid, name, color, sub) {
+  let l = tlLanes.get(key);
+  if (!l) { l = { key, sid, name, color, sub, n: tlLanes.size }; tlLanes.set(key, l); }
+  else { l.name = name; l.color = color; }
+  return l;
+}
+function tlPush(en) { tl.push(en); if (tl.length > 3000) tl.splice(0, 500); }
+function tlMark(sid, kind, text, t = tlNow()) { tlMarks.push({ sid, kind, text, t }); if (tlMarks.length > 400) tlMarks.splice(0, 100); }
+function tlEvent(e, s, who) {
+  const key = s.sid + '|' + (e.agent || 'main');
+  if (e.ev === 'PreToolUse') {
+    const en = { lane: tlLane(key, s.sid, who.name, who.color, !!e.agent), tool: TOOL_LABEL(e.tool), cat: catOf(e.tool, e.plan), text: e.file || e.desc || e.cmd || e.pat || e.q || e.url || '', t0: e.ts, t1: null };
+    tlPush(en);
+    if (e.tid) tlOpen.set(key + '|' + e.tid, en);
+  } else if (e.ev === 'PostToolUse' || e.ev === 'PostToolUseFailure') {
+    const en = tlOpen.get(key + '|' + e.tid);
+    if (en) { en.t1 = e.ts; en.err = !!e.err; tlOpen.delete(key + '|' + e.tid); }
+  } else if (e.ev === 'UserPromptSubmit' && !/^\s*</.test(e.prompt || '')) { tlCerrar(s.sid + '|main'); tlMark(s.sid, 'prompt', e.prompt ?? '(mensaje privado)', e.ts); }
+  else if (e.ev === 'Stop') { tlCerrar(s.sid + '|main'); tlMark(s.sid, 'fin', 'fin del turno', e.ts); }
+}
+// A veces no llega el final de una herramienta: al acabar el turno, lo que siga abierto en el principal se cierra
+function tlCerrar(prefijo) {
+  for (const [k, en] of tlOpen) if (k.startsWith(prefijo + '|')) { en.t1 = en.t0 + 1; en.sinFin = true; tlOpen.delete(k); }
+}
+$('#tlLeyenda').innerHTML = Object.values(TL_CATS).map(([n, c]) => `<span><i style="--c:${c}"></i>${n}</span>`).join('') + '<span><i style="--c:transparent;border:2px solid #FF8A7A"></i>Falló</span>';
+const tcv = $('#tlCanvas'), tctx = tcv.getContext('2d'), tlTip = $('#tlTip');
+let tlWin = 300, tlHits = [], tlH = 200;
+document.querySelectorAll('.seg button[data-win]').forEach(b => b.addEventListener('click', () => {
+  tlWin = +b.dataset.win;
+  document.querySelectorAll('.seg button[data-win]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  tlDraw();
+}));
+const durTxt = d => d < 1 ? '<1 s' : d < 90 ? Math.round(d) + ' s' : fmt(d);
+function tlDraw() {
+  const sid = live ? (sesionPanel()?.sid || null) : 'sim';
+  const now = tlNow(), from = now - tlWin;
+  const fin = en => en.t1 ?? Math.min(now, en.t0 + (live ? 600 : 6));
+  const vis = tl.filter(en => (!sid || en.lane.sid === sid) && fin(en) >= from);
+  const lanes = [...new Set(vis.map(en => en.lane))];
+  for (const l of tlLanes.values()) if ((!sid || l.sid === sid) && !l.sub && !lanes.includes(l)) lanes.push(l);
+  lanes.sort((p, q) => (p.sub - q.sub) || (p.n - q.n));
+  const LH = 34, TOP = 34, LEFT = 176, RIGHT = 18;
+  tlH = Math.max(160, TOP + lanes.length * LH + 34);
+  if (tcv.height !== tlH * 2) tcv.height = tlH * 2;
+  const c = tctx; c.setTransform(2, 0, 0, 2, 0, 0);
+  rect(c, 0, 0, 960, tlH, '#141F28');
+  const X = t => LEFT + (t - from) / tlWin * (960 - LEFT - RIGHT);
+  // Rejilla y horas
+  const paso = [10, 30, 60, 120, 300, 600, 900, 1800].find(p => tlWin / p <= 7) || 3600;
+  c.font = '600 10px "JetBrains Mono", monospace'; c.textBaseline = 'middle'; c.textAlign = 'center';
+  for (let t = Math.ceil(from / paso) * paso; t <= now; t += paso) {
+    const x = X(t); rect(c, x, TOP - 4, 1, tlH - TOP - 22, 'rgba(255,255,255,.08)');
+    c.fillStyle = '#8A99A8'; c.fillText(live ? clockOf(t).slice(0, paso >= 60 ? 5 : 8) : fmt(t), x, tlH - 12);
+  }
+  // Filas
+  tlHits = [];
+  lanes.forEach((l, i) => {
+    const y = TOP + i * LH;
+    rect(c, 0, y, 960, LH, i % 2 ? 'rgba(255,255,255,.025)' : 'rgba(255,255,255,0)');
+    rect(c, l.sub ? 22 : 10, y + 11, 10, 10, l.color);
+    c.textAlign = 'left'; c.fillStyle = l.sub ? '#C9D4DE' : '#FFFFFF'; c.font = (l.sub ? '600 ' : '700 ') + '11px "JetBrains Mono", monospace';
+    const nombre = l.name.length > 20 ? l.name.slice(0, 19) + '…' : l.name;
+    c.fillText(nombre, l.sub ? 38 : 26, y + LH / 2);
+    for (const en of vis) {
+      if (en.lane !== l) continue;
+      const x0 = Math.max(LEFT, X(en.t0)), x1 = Math.min(960 - RIGHT, X(fin(en))), w = Math.max(3, x1 - x0);
+      const vivo = en.t1 == null && live;
+      c.globalAlpha = vivo ? .55 + .45 * Math.abs(Math.sin(now * 3)) : 1;
+      rect(c, x0, y + 8, w, LH - 16, TL_CATS[en.cat][1]);
+      c.globalAlpha = 1;
+      if (en.err) { c.strokeStyle = '#FF8A7A'; c.lineWidth = 2; c.strokeRect(x0 + 1, y + 9, Math.max(2, w - 2), LH - 18); }
+      tlHits.push({ x: x0, y: y + 6, w: Math.max(w, 6), h: LH - 12, en, end: fin(en) });
+    }
+  });
+  // Tus mensajes (naranja) y finales de turno (verde)
+  for (const m of tlMarks) {
+    if ((sid && m.sid !== sid) || m.t < from) continue;
+    const x = X(m.t), col = m.kind === 'prompt' ? '#EB8A62' : '#6DDB97';
+    for (let y = TOP - 4; y < tlH - 24; y += 6) rect(c, x, y, 1.5, 3, col);
+    c.textAlign = 'center'; c.fillStyle = col; c.font = '700 10px "JetBrains Mono", monospace';
+    c.fillText(m.kind === 'prompt' ? 'Tú' : '✓', x, TOP - 14);
+    tlHits.push({ x: x - 4, y: TOP - 22, w: 8, h: tlH - TOP, mark: m });
+  }
+  // Ahora
+  c.textAlign = 'right'; c.fillStyle = '#8A99A8'; c.fillText('ahora', 960 - RIGHT, TOP - 14);
+  if (!lanes.length) { c.textAlign = 'center'; c.fillStyle = '#C9D4DE'; c.font = '600 12px "JetBrains Mono", monospace'; c.fillText('Aún no hay actividad en esta ventana de tiempo', 480, tlH / 2); }
+}
+tcv.addEventListener('mousemove', ev => {
+  const px = ev.offsetX / tcv.clientWidth * 960, py = ev.offsetY / tcv.clientHeight * tlH;
+  const h = tlHits.find(k => px >= k.x && px <= k.x + k.w && py >= k.y && py <= k.y + k.h);
+  if (!h) { tlTip.hidden = true; return; }
+  const oculto = privado();
+  if (h.mark) tlTip.innerHTML = h.mark.kind === 'prompt' ? `<b>Tu mensaje</b><br>${esc(oculto ? '•••' : h.mark.text)}` : `<b>${esc(h.mark.text)}</b>`;
+  else {
+    const en = h.en, txt = en.text && !oculto ? ' · ' + esc(en.text) : '';
+    tlTip.innerHTML = `<b>${esc(en.lane.name)}</b><br>${esc(en.tool)}${txt}<br>${en.t1 == null && live ? 'en marcha · ' : ''}${en.sinFin ? 'no llegó su final' : durTxt(h.end - en.t0)}${en.err ? ' · <b style="color:#C0392B">falló</b>' : ''}`;
+  }
+  tlTip.hidden = false;
+  const r = tcv.parentElement.clientWidth;
+  tlTip.style.left = Math.min(ev.offsetX + 14, r - tlTip.offsetWidth - 4) + 'px'; tlTip.style.top = (ev.offsetY + 14) + 'px';
+});
+tcv.addEventListener('mouseleave', () => { tlTip.hidden = true; });
 
 /* ---------- Vista de oficina (desde arriba) ----------
    Otra forma de ver lo mismo: cada agente tiene su mesa y va a la estantería a por archivos, a la
@@ -1437,10 +1591,11 @@ function officeDraw() {
   if (!list.length) label(c, 'La oficina está vacía: aquí aparecerán tus sesiones', 480, 290, '#fff', 'rgba(8,14,20,.72)');
 }
 let vista = 'pantalla';
+const VISTAS = { pantalla: '#screenRoom', oficina: '#officeRoom', cronologia: '#timeRoom' };
 function setVista(v) {
-  vista = v === 'oficina' ? 'oficina' : 'pantalla';
-  $('.room:not(.officeRoom)').hidden = vista === 'oficina';
-  $('#officeRoom').hidden = vista !== 'oficina';
+  vista = VISTAS[v] ? v : 'pantalla';
+  for (const [k, sel] of Object.entries(VISTAS)) $(sel).hidden = k !== vista;
+  if (vista === 'cronologia') tlDraw();
   document.querySelectorAll('.seg button[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === vista));
   try { localStorage.setItem('oficina-vista', vista); } catch {}
   if (vista === 'pantalla') fit();
@@ -1465,7 +1620,7 @@ function frame(now) {
     shown += (progress - shown) * Math.min(1, dt * 3);
   }
   if (vista === 'oficina') officeDraw();
-  if ((sideT -= dt) <= 0) { sideT = .25; renderSide(); }
+  if ((sideT -= dt) <= 0) { sideT = .25; renderSide(); if (vista === 'cronologia') tlDraw(); }
   requestAnimationFrame(frame);
 }
 renderSide();
