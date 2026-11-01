@@ -1,19 +1,19 @@
 # La oficina de Claude
 
-Mira en directo a Claude Code y a sus agentes trabajando dentro de un ordenador pixel art.
+Mira en directo a Claude Code, a Codex y a sus agentes trabajando dentro de un ordenador pixel art.
 
 > Proyecto de la comunidad, no oficial. No está hecho ni respaldado por Anthropic.
 
-Cada sesión de Claude Code es un muñeco naranja. Cuando Claude lanza un agente, aparece otro muñeco más pequeño a su lado. Lo que hacen de verdad se ve en la pantalla:
+Cada sesión de Claude Code es un muñeco naranja y cada sesión de Codex, uno turquesa con antena. Cuando lanzan un agente, aparece otro muñeco más pequeño a su lado. Lo que hacen de verdad se ve en la pantalla:
 
 - un comando o una búsqueda se escribe en una terminal,
 - leer un archivo es ir a por su icono y cogerlo,
 - editar o crear un archivo abre un editor con el principio del código,
 - mirar la web abre un navegador,
-- cuando un agente termina, vuelve con Claude, le entrega el trabajo y se va,
-- al acabar el turno, Claude cierra las ventanas, celebra y espera tu mensaje.
+- cuando un agente termina, vuelve con quien lo lanzó, le entrega el trabajo y se va,
+- al acabar el turno, cierra las ventanas, celebra y espera tu mensaje.
 
-A la derecha tienes tu último mensaje, el plan (cuando Claude hace uno), qué está haciendo cada agente y un registro con cada herramienta que usan.
+A la derecha tienes tu último mensaje, el plan (cuando hay uno), qué está haciendo cada agente y un registro con cada herramienta que usan.
 
 ## Instalación
 
@@ -35,6 +35,22 @@ claude plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/o
 
 En la app de escritorio, donde `/plugin` no funciona: pulsa **+** junto a la caja de texto, luego **Plugins**, **Add marketplace** con `nicooolaaassg-collabHacker/oficina-agentes`, y después **Add plugin**.
 
+### En Codex
+
+Necesitas Codex (la app de terminal de OpenAI) y Python 3. En una terminal normal:
+
+```bash
+codex plugin marketplace add nicooolaaassg-collabHacker/oficina-agentes
+```
+
+```bash
+codex plugin add oficina-agentes@oficina-agentes
+```
+
+Codex no deja que un plugin haga nada hasta que apruebas sus hooks. Abre `codex`, escribe `/hooks` y pulsa `t` (aprobar todos); los contadores pasan a `1/1`. Tendrás que volver a hacerlo cada vez que actualices el plugin, porque Codex pide aprobar los hooks de nuevo cuando cambian.
+
+Si usas los dos, Claude Code y Codex aparecen juntos en la misma oficina.
+
 ## Uso
 
 Escribe en Claude Code:
@@ -43,7 +59,9 @@ Escribe en Claude Code:
 /oficina
 ```
 
-Se abre `http://oficina.localhost:4545` en tu navegador (si no carga, usa `http://localhost:4545`). Esa dirección solo existe en tu ordenador mientras la oficina está en marcha. Déjala abierta y sigue trabajando con Claude Code como siempre: cualquier sesión que abras aparecerá en la oficina.
+En Codex, pídeselo: «abre la oficina» (usa la skill `oficina` del plugin).
+
+Se abre `http://oficina.localhost:4545` en tu navegador (si no carga, usa `http://localhost:4545`). Esa dirección solo existe en tu ordenador mientras la oficina está en marcha. Déjala abierta y sigue trabajando con Claude Code como siempre: cualquier sesión que abras, de Claude Code o de Codex, aparecerá en la oficina.
 
 Si prefieres arrancarla a mano, desde la carpeta del plugin:
 
@@ -83,24 +101,32 @@ Para borrar todo lo apuntado: `rm -rf ~/.claude/oficina`.
 /plugin uninstall oficina-agentes
 ```
 
+En Codex:
+
+```bash
+codex plugin remove oficina-agentes@oficina-agentes
+```
+
 Si tenías la oficina abierta, cierra el servidor con `pkill -f "oficina.*server.py"` o reinicia el ordenador.
 
 ## Cómo funciona
 
 | Archivo | Qué hace |
 |---|---|
-| `hooks/hooks.json` | Engancha `scripts/hook.py` a los eventos de Claude Code (herramientas, agentes, mensajes, fin de turno) |
-| `scripts/hook.py` | Resume cada evento en una línea de `~/.claude/oficina/events.jsonl` |
+| `hooks/hooks.json` | Engancha `scripts/hook.py` a los eventos de Claude Code y de Codex (herramientas, agentes, mensajes, fin de turno) |
+| `scripts/hook.py` | Resume cada evento en una línea de `~/.claude/oficina/events.jsonl` y traduce las herramientas de Codex a las de Claude |
 | `scripts/server.py` | Sirve la página y le envía los eventos nuevos en directo (Server-Sent Events) |
 | `scripts/start.py` | Arranca el servidor en segundo plano si no está en marcha y abre el navegador |
 | `commands/oficina.md` | El comando `/oficina` |
+| `codex/skills/oficina/SKILL.md` | La skill para abrir la oficina desde Codex |
+| `.codex-plugin/plugin.json` | Lo que necesita Codex para instalar el plugin |
 | `index.html` | La oficina. Si la abres sin servidor, enseña una simulación con tareas de ejemplo |
 
 Los hooks van en segundo plano (`async`), así que no ralentizan tus sesiones.
 
 ## English
 
-**Claude's Office** is an unofficial community Claude Code plugin (not made or endorsed by Anthropic) that shows your Claude Code sessions and their subagents working live, as pixel-art characters moving around a desktop. Install it with `/plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/oficina-agentes`, then type `/oficina` to open `http://oficina.localhost:4545` on your own machine (address configurable in `~/.claude/oficina/config.json`). Everything stays on your machine: events are logged to `~/.claude/oficina/events.jsonl` and the server only answers requests from your own computer. The interface is in Spanish.
+**Claude's Office** is an unofficial community Claude Code plugin (not made or endorsed by Anthropic) that shows your Claude Code and Codex sessions and their subagents working live, as pixel-art characters moving around a desktop. Install it with `/plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/oficina-agentes`, (in Codex: `codex plugin marketplace add nicooolaaassg-collabHacker/oficina-agentes`, `codex plugin add oficina-agentes@oficina-agentes`, then approve its hooks with `/hooks` and `t`), then type `/oficina` (or ask Codex to "abre la oficina") to open `http://oficina.localhost:4545` on your own machine (address configurable in `~/.claude/oficina/config.json`). Everything stays on your machine: events are logged to `~/.claude/oficina/events.jsonl` and the server only answers requests from your own computer. The interface is in Spanish.
 
 ## Licencia
 
