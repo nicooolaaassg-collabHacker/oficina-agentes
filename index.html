@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>La oficina de Claude</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -86,6 +87,10 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
 .keyboard{position:absolute;left:50%;top:16px;transform:translateX(-50%);width:36%;height:14px;border-radius:4px;background:var(--bezel);box-shadow:0 3px 0 var(--bezel-edge);background-image:repeating-linear-gradient(90deg,transparent 0 9px,var(--bezel-edge) 9px 10px)}
 .mug{position:absolute;right:11%;bottom:calc(100% - 4px);width:24px;height:28px;background:var(--accent);border-radius:0 0 6px 6px}
 .mug::after{content:"";position:absolute;right:-9px;top:6px;width:7px;height:11px;border:3px solid var(--accent);border-left:0;border-radius:0 6px 6px 0}
+
+/* Vista de oficina: la misma actividad, vista desde arriba en una oficina con mesas */
+.officeRoom{padding:clamp(10px,2vw,22px)}
+#officeCanvas{display:block;width:100%;height:auto;aspect-ratio:960/560;border-radius:10px;image-rendering:pixelated;box-shadow:0 10px 30px rgba(0,0,0,.15)}
 
 /* Escritorio dentro de la pantalla */
 .wallpaper{position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,var(--os-wall-2),transparent 60%),radial-gradient(rgba(255,255,255,.07) 1px,transparent 1.5px) 0 0/16px 16px}
@@ -199,6 +204,16 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
 #log code{font:600 11px var(--f-mono);background:var(--chip);padding:1px 6px;border-radius:4px;color:var(--ink)}
 .txt{color:var(--muted);min-width:0;overflow-wrap:anywhere}
 .hint{font-size:12px;color:var(--muted);margin:0}
+.sesion{display:flex;flex-direction:column;gap:4px;font:600 12px var(--f-mono);color:var(--muted);margin:0 0 10px}
+.sesion select,.filtros input[type=search]{font:14px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+.fallo{margin:-4px 0 12px;font:600 13px var(--f-mono);color:var(--os-err);background:color-mix(in srgb,var(--os-err) 12%,transparent);border-left:3px solid var(--os-err);padding:4px 8px}
+.chip.err{background:color-mix(in srgb,var(--os-err) 16%,transparent);color:#C0392B}
+.filtros{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.filtros input[type=search]{flex:1 1 140px}
+.filtros label{font-size:13px;color:var(--muted);display:flex;gap:5px;align-items:center}
+#log li.err .txt{color:#C0392B}
+/* Modo privado: tus textos se difuminan (mensajes, comandos, código, bocadillos) */
+.privado #taskName,.privado #log .txt,.privado .bubble,.privado .win .body,.privado .ra,.privado #plan li{filter:blur(5px)}
 @media (prefers-reduced-motion: reduce){.status .dot,#plan li.run::before,.term .ln:last-child::after{animation:none}}
 </style>
 
@@ -224,6 +239,11 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
       <button type="button" data-speed="2" aria-pressed="false">2×</button>
       <button type="button" data-speed="4" aria-pressed="false">4×</button>
     </div>
+    <div class="seg" role="group" aria-label="Vista">
+      <button type="button" data-view="pantalla" aria-pressed="true">Pantalla</button>
+      <button type="button" data-view="oficina" aria-pressed="false">Oficina</button>
+    </div>
+    <button class="btn" id="btnPrivado" type="button" aria-pressed="false" title="Difumina tus mensajes, comandos y código en pantalla">Ocultar textos</button>
     <button class="btn" id="btnAgent" type="button">+ Lanzar agente</button>
     <form id="taskForm">
       <label for="taskInput" hidden>Nueva tarea</label>
@@ -254,11 +274,18 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
       </div>
       <div class="desk"><div class="keyboard"></div><div class="mug"></div></div>
     </section>
+    <section class="room officeRoom" id="officeRoom" aria-label="La oficina vista desde arriba" hidden>
+      <canvas id="officeCanvas" width="1920" height="1120"></canvas>
+    </section>
 
     <aside class="side">
       <section>
         <h2>Tarea <span id="taskNum"></span></h2>
+        <label class="sesion" id="sesionBox" hidden>Sesión
+          <select id="sesionSel"><option value="">Automática (la última que hizo algo)</option></select>
+        </label>
         <p id="taskName">Preparando…</p>
+        <p class="fallo" id="falloLine" role="status" hidden></p>
         <div class="bar" role="progressbar" aria-label="Progreso de la tarea" aria-valuemin="0" aria-valuemax="100"><i id="bar"></i></div>
         <div class="meta"><span><b id="pct">0%</b> hecho</span><span id="times">00:00</span></div>
         <div class="stats">
@@ -278,6 +305,10 @@ h1{font:700 clamp(24px,3.2vw,34px)/1.05 var(--f-display);margin:0;letter-spacing
       </section>
       <section>
         <h2>Registro</h2>
+        <div class="filtros">
+          <input id="logFiltro" type="search" placeholder="Buscar en el registro…" aria-label="Buscar en el registro" autocomplete="off">
+          <label><input id="logFallos" type="checkbox"> Solo fallos</label>
+        </div>
         <ol id="log"></ol>
       </section>
       <section><p class="hint" id="hint">Simulación animada. Para ver tus sesiones reales, instala el plugin <code>oficina-agentes</code> y escribe <code>/oficina</code> en Claude Code. Barra espaciadora: pausar o seguir.</p></section>
@@ -840,9 +871,20 @@ function log(a, tool, text, ts) {
   if (tool) stats.tools++;
   const li = document.createElement('li');
   li.innerHTML = `<time>${ts ? clockOf(ts) : fmt(elapsed)}</time><span class="who" style="--c:${a.color}">${esc(a.name)}</span>${tool ? `<code>${tool}</code>` : ''}<span class="txt">${esc(text)}</span>`;
+  if (/falló/.test(text)) li.classList.add('err');
+  filtrarUno(li);
   logEl.prepend(li);
-  while (logEl.children.length > 60) logEl.lastChild.remove();
+  while (logEl.children.length > 200) logEl.lastChild.remove();
 }
+// Buscar en el registro y ver solo los fallos
+const logFiltro = $('#logFiltro'), logFallos = $('#logFallos');
+function filtrarUno(li) {
+  const q = logFiltro.value.trim().toLowerCase();
+  li.hidden = (logFallos.checked && !li.classList.contains('err')) || (q && !li.textContent.toLowerCase().includes(q));
+}
+function filtrarLog() { for (const li of logEl.children) filtrarUno(li); }
+logFiltro.addEventListener('input', filtrarLog);
+logFallos.addEventListener('change', filtrarLog);
 let planKey = '';
 function renderPlan() {
   const key = JSON.stringify(planItems);
@@ -869,7 +911,11 @@ function renderSide() {
   $('#stAgents').textContent = stats.agents; $('#stDone').textContent = stats.done;
   const subs = agents.filter(a => !a.main).length;
   $('#agentCount').textContent = subs ? `${subs} en marcha` : 'solo Claude';
-  $('#roster').innerHTML = agents.map(a => `<li><img alt="" src="${sprite(a.color, { kind: a.kind })}"><div style="min-width:0"><div class="rn">${esc(a.name)}<small>${a.main ? 'principal' : esc(a.role)}</small></div><div class="ra">${esc(a.act)}</div></div><span class="chip ${a.main ? 'lead' : 'on'}">${a.main ? 'dirige' : 'trabaja'}</span></li>`).join('');
+  $('#roster').innerHTML = agents.map(a => {
+    const de = !a.main && a.session?.main ? ` · de ${a.session.main.name}` : '';
+    const chip = a.err ? '<span class="chip err">falló</span>' : `<span class="chip ${a.main ? 'lead' : 'on'}">${a.main ? 'dirige' : 'trabaja'}</span>`;
+    return `<li><img alt="" src="${sprite(a.color, { kind: a.kind })}"><div style="min-width:0"><div class="rn">${esc(a.name)}<small>${a.main ? 'principal' : esc(a.role + de)}</small></div><div class="ra">${esc(a.act)}</div></div>${chip}</li>`;
+  }).join('');
   const d = new Date(); $('#clock').textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
@@ -882,10 +928,20 @@ function togglePause() {
   setStatus(status);
 }
 btnPause.addEventListener('click', togglePause);
-document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+document.querySelectorAll('.seg button[data-speed]').forEach(b => b.addEventListener('click', () => {
   speed = +b.dataset.speed;
-  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  document.querySelectorAll('.seg button[data-speed]').forEach(x => x.setAttribute('aria-pressed', x === b));
 }));
+// Modo privado: difumina tus textos en pantalla (no cambia lo que se guarda; eso va en config.json)
+const btnPrivado = $('#btnPrivado');
+function setPrivado(on) {
+  $('#page').classList.toggle('privado', on);
+  btnPrivado.setAttribute('aria-pressed', on);
+  btnPrivado.textContent = on ? 'Mostrar textos' : 'Ocultar textos';
+  try { localStorage.setItem('oficina-privado', on ? '1' : ''); } catch {}
+}
+btnPrivado.addEventListener('click', () => setPrivado(btnPrivado.getAttribute('aria-pressed') !== 'true'));
+try { setPrivado(localStorage.getItem('oficina-privado') === '1'); } catch {}
 $('#btnAgent').addEventListener('click', () => {
   if (agents.length > 7) { log(main, null, 'ya hay suficientes agentes trabajando'); return; }
   const r = pick(Object.keys(ROLES));
@@ -938,8 +994,10 @@ function spawnMain(s) {
 }
 function spawnLiveSub(s, id, atype, desc) {
   const t = subType(atype, desc), R = ROLES[roleOf(t)], p = s.main;
-  const b = new Agent({ name: prettyType(t), role: t || 'agente', color: COLORS[R.color], kind: appOf(s).kind, scale: 3, x: p.x + p.w / 2 - 24 + rnd(-30, 30), y: p.y + p.h - 33 });
-  b.act = desc || 'Empezando'; b.session = s;
+  // Si ya hay otro agente con ese nombre en la sesión, este lleva número: "Explorador 2"
+  const iguales = [...s.subs.values()].filter(x => x.alive && x.baseName === prettyType(t)).length;
+  const b = new Agent({ name: prettyType(t) + (iguales ? ' ' + (iguales + 1) : ''), role: t || 'agente', color: COLORS[R.color], kind: appOf(s).kind, scale: 3, x: p.x + p.w / 2 - 24 + rnd(-30, 30), y: p.y + p.h - 33 });
+  b.act = desc || 'Empezando'; b.session = s; b.baseName = prettyType(t);
   s.subs.set(id, b); stats.agents++;
   burst(b.x + b.w / 2, b.y + b.h / 2, b.color, 12);
   return b;
@@ -1042,6 +1100,7 @@ const TOOL_LABEL = t => t.startsWith('mcp__') ? t.split('__').pop().replace(/_/g
 function onEvent(e, animate) {
   if (!e || !e.sid) return;
   const s = ensureSession(e);
+  ultimoEvento = e.ts || ultimoEvento;
   if (animate || !focus) focus = s;
   if (e.ev === 'SessionEnd') {
     s.subs.forEach(b => b.remove()); s.main?.remove();
@@ -1057,11 +1116,12 @@ function onEvent(e, animate) {
       a?.push({ t: 'say', text: '¡Hola!', d: 1.6, hold: .4 });
       break;
     case 'UserPromptSubmit':
-      s.turnStart = e.ts; s.state = 'work';
+      s.turnStart = e.ts; s.state = 'work'; s.err = null;
       // Avisos internos (un agente que termina, un recordatorio…) también llegan como "prompt"
       if (/^\s*</.test(e.prompt || '')) { log(who, null, 'recibe un aviso interno', e.ts); a?.push({ t: 'say', text: 'Me llega un aviso.', d: 1.4, hold: .3 }); break; }
-      s.prompt = e.prompt;
-      log({ name: 'Tú', color: 'var(--ink)' }, null, e.prompt, e.ts);
+      // Con el modo privado del hook el mensaje no se guarda
+      s.prompt = e.prompt ?? '(mensaje privado)';
+      log({ name: 'Tú', color: 'var(--ink)' }, null, s.prompt, e.ts);
       a?.push({ t: 'say', text: pick(['¡Vamos!', 'Me pongo con ello.', 'Entendido.', 'Vale, a ello.']), d: 1.8, hold: .6, act: 'Leyendo tu mensaje' });
       break;
     case 'PreToolUse': {
@@ -1077,6 +1137,10 @@ function onEvent(e, animate) {
       break;
     }
     case 'PostToolUse': case 'PostToolUseFailure':
+      // El fallo se queda a la vista hasta que una herramienta de ese mismo agente vuelve a ir bien
+      if (e.err) s.err = { tool: TOOL_LABEL(e.tool), ts: e.ts, quien: who.name };
+      else if (s.err && s.err.quien === who.name) s.err = null;
+      if (a) a.err = !!e.err;
       if (e.err) {
         log(who, null, `${e.tool} falló`, e.ts);
         a?.push({ t: 'say', text: 'Uy, eso falló. Pruebo otra cosa.', d: 2, hold: .6 });
@@ -1116,16 +1180,43 @@ function onEvent(e, animate) {
       break;
   }
 }
+let ultimoEvento = 0, offDesde = 0, elegida = '';
+const HINT_LIVE = 'En directo: cada muñeco es una de tus sesiones de Claude Code (naranja) o de Codex (turquesa, con antena), o uno de sus agentes. Barra espaciadora: pausar o seguir.';
+const hace = ts => ts ? `hace ${fmt(Math.max(0, nowS() - ts))}` : 'nunca';
+// La sesión que describe el panel: la que elegiste o, en automático, la última que hizo algo
+const sesionPanel = () => (elegida && sessions.get(elegida)) || focus;
 function liveTimes() {
-  if (!focus) return 'sin sesiones activas';
-  return `turno ${fmt(Math.max(0, (focus.state === 'work' ? nowS() : focus.last) - focus.turnStart))} · ${focus.tools} herramientas`;
+  if (status === 'off') return `reconectando… · último evento ${hace(ultimoEvento)}`;
+  const s = sesionPanel();
+  if (!s) return 'sin sesiones activas';
+  return `turno ${fmt(Math.max(0, (s.state === 'work' ? nowS() : s.last) - s.turnStart))} · ${s.tools} herramientas`;
 }
+let sesionesKey = '';
+function pintarSelector() {
+  const lista = [...sessions.values()];
+  const key = lista.map(s => s.sid + s.app + s.proj + s.state).join('|') + elegida;
+  if (key === sesionesKey) return;
+  sesionesKey = key;
+  const estado = { work: 'trabajando', wait: 'esperando', ask: 'te necesita' };
+  $('#sesionSel').innerHTML = '<option value="">Automática (la última que hizo algo)</option>' +
+    lista.map(s => `<option value="${esc(s.sid)}"${s.sid === elegida ? ' selected' : ''}>${esc(appOf(s).name)} · ${esc(s.proj)} · ${estado[s.state] || 'en pausa'}</option>`).join('');
+  $('#sesionBox').hidden = lista.length < 2 && !elegida;
+}
+$('#sesionSel').addEventListener('change', e => { elegida = e.target.value; sesionesKey = ''; renderSide(); });
 function liveSide() {
   // Las sesiones que llevan 30 min sin hacer nada se van del escritorio
   for (const s of sessions.values()) if (s.main?.alive && s.state !== 'work' && nowS() - s.last > 1800) { s.subs.forEach(b => b.remove()); s.main.remove(); }
-  const s = focus;
+  if (elegida && !sessions.has(elegida)) elegida = '';
+  pintarSelector();
+  const s = sesionPanel();
   $('#taskName').textContent = s ? (s.prompt || 'Esperando tu mensaje') : 'Esperando actividad: usa Claude Code o Codex en cualquier sesión y aparecerá aquí.';
-  $('#taskNum').textContent = s ? s.proj : '';
+  $('#taskNum').textContent = s ? `${appOf(s).name} · ${s.proj}` : '';
+  $('#falloLine').hidden = !s?.err;
+  if (s?.err) $('#falloLine').textContent = `⚠ ${s.err.quien}: ${s.err.tool} falló ${hace(s.err.ts)} · aún no ha vuelto a ir bien`;
+  // Sin conexión durante un rato: decir qué hacer
+  $('#hint').textContent = status === 'off' && offDesde && nowS() - offDesde > 10
+    ? 'No llega nada del servidor de la oficina. Si lo cerraste, escribe /oficina en Claude Code (o pide "abre la oficina" a Codex) y esta página se reconecta sola.'
+    : HINT_LIVE;
   planItems = s ? s.plan : [];
   renderPlan();
   const done = planItems.filter(i => i.st === 'done').length;
@@ -1138,19 +1229,224 @@ function startLive() {
   $('#mode').textContent = 'EN DIRECTO'; $('#mode').classList.add('on');
   $('#btnAgent').hidden = true; $('#taskForm').hidden = true;
   $('#stDoneLabel').textContent = 'turnos terminados';
-  $('#hint').textContent = 'En directo: cada muñeco es una de tus sesiones de Claude Code (naranja) o de Codex (turquesa, con antena), o uno de sus agentes. Barra espaciadora: pausar o seguir.';
+  $('#hint').textContent = HINT_LIVE;
   $('#taskName').textContent = 'Conectando…';
   setStatus('idle');
   const es = new EventSource('/events');
-  es.addEventListener('replay', m => { try { onEvent(JSON.parse(m.data), false); } catch {} });
+  es.addEventListener('replay', m => { try { onEvent(JSON.parse(m.data), false); } catch (err) { console.error(err); } });
   es.addEventListener('ready', () => {
     if (status === 'off') setStatus('idle');
     for (const s of sessions.values()) if (!s.main?.alive && nowS() - s.last < 1800) spawnMain(s);
   });
   es.onmessage = m => { try { onEvent(JSON.parse(m.data), true); } catch (err) { console.error(err); } };
-  es.onerror = () => setStatus('off');
-  es.onopen = () => { if (status === 'off') setStatus('idle'); };
+  es.onerror = () => { if (status !== 'off') offDesde = nowS(); setStatus('off'); };
+  es.onopen = () => { offDesde = 0; if (status === 'off') setStatus('idle'); };
 }
+
+/* ---------- Vista de oficina (desde arriba) ----------
+   Otra forma de ver lo mismo: cada agente tiene su mesa y va a la estantería a por archivos, a la
+   pizarra del plan, al rincón de internet, al café o a la puerta según el paso que hace en la pantalla.
+   No escucha eventos: copia el estado de los muñecos de la pantalla, así sirve en simulación y en directo. */
+const ocv = $('#officeCanvas'), octx = ocv.getContext('2d');
+const privado = () => $('#page').classList.contains('privado');
+const DOOR = { x: 480, y: 552 };
+const MAIN_DESKS = [130, 250, 610, 730].map(x => ({ x, y: 104, w: 96, h: 40, boss: true }));
+const SUB_DESKS = [];
+for (const y of [250, 372]) for (const x of [170, 280, 600, 710]) SUB_DESKS.push({ x, y, w: 82, h: 36 });
+const DESKS = [...MAIN_DESKS, ...SUB_DESKS];
+const seat = d => ({ x: d.x + d.w / 2, y: d.y + d.h + 24 });
+const SPOTS = {
+  archivo: [{ x: 82, y: 180 }, { x: 82, y: 262 }, { x: 82, y: 344 }],
+  pizarra: [{ x: 432, y: 104 }, { x: 480, y: 110 }, { x: 528, y: 104 }],
+  web: [{ x: 872, y: 250 }, { x: 872, y: 304 }, { x: 872, y: 358 }],
+  cafe: [{ x: 812, y: 474 }, { x: 864, y: 486 }, { x: 760, y: 500 }],
+};
+const oActors = new Map();
+const deskOf = new Map();
+const imgCache = new Map();
+function spriteImg(src) {
+  let im = imgCache.get(src);
+  if (!im) { im = new Image(); im.src = src; imgCache.set(src, im); }
+  return im;
+}
+function freeDesk(boss) {
+  const taken = new Set(deskOf.values());
+  return (boss ? [...MAIN_DESKS, ...SUB_DESKS] : [...SUB_DESKS, ...MAIN_DESKS]).find(d => !taken.has(d)) || DESKS[0];
+}
+// Qué está haciendo un muñeco, en términos de la oficina
+function activityOf(a, o) {
+  if (!a.alive || !agents.includes(a)) return 'door';
+  let s = a.step;
+  if (s && s.t === 'walk' && !s.follow && a.queue[0]) s = a.queue[0];   // si va de camino, adónde va
+  if (s?.t === 'leave') return 'door';
+  if (s?.t === 'walk' && s.follow && !a.main) return 'jefe';            // vuelve con quien le lanzó
+  if (a.carry || s?.t === 'pick' || s?.t === 'drop') return 'archivo';
+  if (s && ['type', 'ensure', 'open', 'clear'].includes(s.t)) {
+    const k = s.key || s.kind;
+    if (k === 'web') return 'web';
+    if (k === 'plan') return 'pizarra';
+    o.mon = k;
+    return 'desk';
+  }
+  // Sin nada concreto que hacer (o paseando mientras espera): a su mesa, o al café si espera tu mensaje
+  const ocioso = !s || (!a.queue.length && (['wait', 'waitAgents', 'cheer'].includes(s.t) || (s.t === 'walk' && !s.follow)));
+  if (ocioso) return a.main && ['wait', 'done', 'idle'].includes(status) ? 'cafe' : 'desk';
+  return o.act === 'cafe' ? 'desk' : (o.act || 'desk');
+}
+function bossOf(o) {
+  const b = o.agent.session?.main || (live ? null : main);
+  return b && oActors.get(b.id);
+}
+function targetOf(o) {
+  if (o.act === 'door') return DOOR;
+  if (o.act === 'desk') return seat(o.desk);
+  if (o.act === 'jefe') { const b = bossOf(o); return b ? { x: b.x + (o.x < b.x ? -34 : 34), y: b.y + 4 } : seat(o.desk); }
+  const l = SPOTS[o.act]; return l[o.agent.id % l.length];
+}
+function officeUpdate(dt) {
+  for (const a of agents) {
+    if (!oActors.has(a.id)) {
+      const o = { agent: a, x: DOOR.x + rnd(-10, 10), y: DOOR.y, act: 'desk', mon: 'code', t: rnd(0, 3), legs: 0, face: 0 };
+      o.desk = freeDesk(a.main); deskOf.set(o, o.desk);
+      oActors.set(a.id, o);
+    }
+  }
+  for (const [id, o] of oActors) {
+    const a = o.agent;
+    o.act = activityOf(a, o);
+    const tg = targetOf(o);
+    const dx = tg.x - o.x, dy = tg.y - o.y, d = Math.hypot(dx, dy), v = 150 * dt;
+    o.t += dt; o.legs = 0;
+    if (d > v) { o.x += dx / d * v; o.y += dy / d * v; o.legs = 1 + Math.floor(o.t * 9) % 2; o.face = dx > 3 ? 1 : dx < -3 ? -1 : 0; }
+    else { o.x = tg.x; o.y = tg.y; o.face = 0; }
+    o.here = d <= v;
+    if (o.act === 'door' && o.here) { oActors.delete(id); deskOf.delete(o); }
+  }
+}
+
+/* Dibujo: todo en píxeles sobre un lienzo de 960×560 (al doble para que el texto se lea nítido) */
+function rect(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function label(c, text, x, y, col = '#fff', bg = 'rgba(8,14,20,.72)', edge) {
+  c.font = '600 10px "JetBrains Mono", monospace';
+  const w = Math.ceil(c.measureText(text).width) + 10;
+  rect(c, x - w / 2, y, w, 15, bg);
+  if (edge) rect(c, x - w / 2, y, 3, 15, edge);
+  c.fillStyle = col; c.textBaseline = 'middle'; c.textAlign = 'center'; c.fillText(text, x + (edge ? 1.5 : 0), y + 8);
+}
+function drawRoom(c) {
+  // Suelo de madera
+  rect(c, 0, 0, 960, 560, '#C59466');
+  for (let r = 0, y = 60; y < 540; y += 20, r++) {
+    rect(c, 16, y, 928, 1, '#AD7E54');
+    for (let x = 16 + (r % 3) * 40; x < 944; x += 120) rect(c, x, y, 1, 20, '#B4855A');
+  }
+  // Alfombra del centro
+  rect(c, 150, 230, 660, 210, '#5F7EA8'); rect(c, 158, 238, 644, 194, '#6C8CB6');
+  // Paredes
+  rect(c, 0, 0, 960, 60, '#E9E2D5'); rect(c, 0, 54, 960, 6, '#B9A88F');
+  rect(c, 0, 0, 16, 560, '#D8CDBB'); rect(c, 944, 0, 16, 560, '#D8CDBB');
+  rect(c, 0, 540, 960, 20, '#D8CDBB'); rect(c, 448, 540, 64, 20, '#8C6A4B'); rect(c, 452, 543, 56, 14, '#A57E59');
+  // Ventanas
+  for (const x of [40, 640, 830]) { rect(c, x, 10, 90, 36, '#6F5B45'); rect(c, x + 4, 14, 82, 28, '#A9DDF7'); rect(c, x + 44, 14, 2, 28, '#6F5B45'); rect(c, x + 10, 18, 20, 4, '#E9F7FF'); }
+  // Reloj de pared
+  const h = new Date();
+  c.fillStyle = '#FFFDF5'; c.beginPath(); c.arc(330, 28, 15, 0, 7); c.fill(); c.strokeStyle = '#4B3B2B'; c.lineWidth = 2; c.stroke();
+  c.beginPath(); c.moveTo(330, 28); c.lineTo(330 + Math.sin(h.getHours() / 6 * Math.PI) * 8, 28 - Math.cos(h.getHours() / 6 * Math.PI) * 8);
+  c.moveTo(330, 28); c.lineTo(330 + Math.sin(h.getMinutes() / 30 * Math.PI) * 12, 28 - Math.cos(h.getMinutes() / 30 * Math.PI) * 12); c.stroke();
+  // Pizarra con el plan
+  rect(c, 378, 8, 204, 52, '#6B5A48'); rect(c, 382, 12, 196, 44, '#FBFBF6');
+  c.font = '700 9px "JetBrains Mono", monospace'; c.textAlign = 'left'; c.textBaseline = 'top';
+  const plan = planItems.slice(0, 3);
+  if (!plan.length) { c.fillStyle = '#9AA3AB'; c.fillText('PLAN · sin plan todavía', 388, 16); }
+  plan.forEach((p, i) => {
+    c.fillStyle = p.st === 'done' ? '#2C8452' : p.st === 'run' ? '#B9532F' : '#56636F';
+    const t = (p.st === 'done' ? '✓ ' : p.st === 'run' ? '▸ ' : '· ') + (privado() ? '••••••' : p.text);
+    c.fillText(t.length > 30 ? t.slice(0, 29) + '…' : t, 388, 16 + i * 13);
+  });
+  // Estanterías (archivo)
+  for (let k = 0; k < 3; k++) {
+    const y = 140 + k * 82;
+    rect(c, 18, y, 40, 72, '#7A5638'); rect(c, 22, y + 4, 32, 64, '#5C3F28');
+    for (let s = 0; s < 3; s++) for (let b = 0; b < 5; b++) rect(c, 24 + b * 6, y + 6 + s * 21, 5, 17, ['#C9513F', '#3E6FD8', '#E2A443', '#2C8452', '#8455C8'][(b + s + k) % 5]);
+  }
+  // Rincón de internet: pantalla grande en la pared
+  rect(c, 904, 222, 38, 160, '#2A3038'); rect(c, 908, 228, 30, 148, '#1E5A8C');
+  for (let i = 0; i < 8; i++) rect(c, 912, 236 + i * 17, 10 + (i * 7) % 16, 4, '#8FC7F2');
+  c.fillStyle = '#9AD3FF'; c.beginPath(); c.arc(923, 360, 7, 0, 7); c.fill();
+  // Café y sofá
+  rect(c, 840, 418, 100, 30, '#7A5638'); rect(c, 846, 410, 26, 18, '#3B4249'); rect(c, 852, 414, 14, 8, '#C9513F'); rect(c, 884, 412, 10, 12, '#FFFDF5');
+  rect(c, 720, 506, 120, 30, '#B9532F'); rect(c, 720, 498, 120, 12, '#9C4426'); rect(c, 716, 498, 10, 38, '#9C4426'); rect(c, 834, 498, 10, 38, '#9C4426');
+  // Plantas
+  for (const [x, y] of [[30, 500], [920, 80], [30, 80], [600, 500]]) { rect(c, x - 8, y, 16, 14, '#B4532B'); c.fillStyle = '#4E9A5A'; c.beginPath(); c.arc(x, y - 4, 13, 0, 7); c.fill(); c.fillStyle = '#62B26E'; c.beginPath(); c.arc(x - 4, y - 8, 7, 0, 7); c.fill(); }
+  // Rótulos de cada sitio
+  label(c, 'ARCHIVO', 40, 122, '#5C3F28', 'rgba(255,253,245,.85)');
+  label(c, 'INTERNET', 902, 204, '#1E5A8C', 'rgba(255,253,245,.85)');
+  label(c, 'CAFÉ', 890, 456, '#7A5638', 'rgba(255,253,245,.85)');
+  label(c, 'PUERTA', 480, 522, '#5C3F28', 'rgba(255,253,245,.85)');
+}
+function drawDesk(c, d, o) {
+  // Silla (debajo del agente), mesa y monitor
+  rect(c, d.x + d.w / 2 - 12, d.y + d.h + 12, 24, 20, '#3B4249'); rect(c, d.x + d.w / 2 - 12, d.y + d.h + 28, 24, 5, '#2A3038');
+  rect(c, d.x, d.y, d.w, d.h, d.boss ? '#8B5E3D' : '#A87650'); rect(c, d.x, d.y + d.h - 5, d.w, 5, '#6E4A30');
+  if (d.boss && o) rect(c, d.x, d.y, d.w, 4, o.agent.color);
+  const mx = d.x + d.w / 2 - 18, my = d.y + 3;
+  rect(c, mx, my, 36, 22, '#2A3038');
+  const working = o && o.act === 'desk' && o.here;
+  const typing = working && o.agent.step?.t === 'type';
+  const bg = !working ? '#151B21' : { term: '#121A21', code: '#F4F6F8', web: '#FFFFFF', plan: '#FFFDF2' }[o.mon] || '#F4F6F8';
+  rect(c, mx + 3, my + 3, 30, 15, bg);
+  if (working) {
+    const fg = o.mon === 'term' ? '#6DDB97' : '#9A3BA6';
+    const off = typing ? Math.floor(o.t * 6) % 4 : 0;
+    for (let i = 0; i < 3; i++) rect(c, mx + 5, my + 5 + i * 4, 6 + ((i + off) * 7) % 20, 2, i === 1 ? '#2B7A4B' : fg);
+  }
+  rect(c, mx + 14, my + 22, 8, 3, '#2A3038');
+  rect(c, d.x + 8, d.y + 26, 22, 7, '#D9DEE3');   // teclado
+  if (d.boss) rect(c, d.x + d.w - 22, d.y + 20, 9, 11, '#B9532F'); // taza
+}
+function drawActor(c, o) {
+  const a = o.agent, s = a.main ? 3 : 2.4, w = 16 * s, h = 11 * s;
+  const arms = o.here && o.act !== 'door' ? a.pose.arms : 'down';
+  const im = spriteImg(sprite(a.color, { legs: o.legs, eye: o.face, blink: a.blinkT < 0, arms, kind: a.kind }));
+  const hop = o.here ? a.hop || 0 : 0;
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(o.x, o.y + 2, w * .36, 5, 0, 0, 7); c.fill();
+  if (im.complete) c.drawImage(im, Math.round(o.x - w / 2), Math.round(o.y - h - hop), w, h);
+  if (a.carry) { rect(c, o.x - 7, o.y - h - 22, 14, 16, '#F7F9FB'); rect(c, o.x - 7, o.y - h - 11, 14, 5, a.carry.color || '#5B6875'); }
+  label(c, a.name, o.x, o.y + 6, '#fff', 'rgba(8,14,20,.72)', a.color);
+}
+function drawBubble(c, o) {
+  const a = o.agent; if (a.bub.hidden) return;
+  let t = a.bub.textContent; if (t.length > 42) t = t.slice(0, 41) + '…';
+  if (privado()) t = '•••';
+  c.font = '700 11px "Atkinson Hyperlegible", sans-serif';
+  const w = Math.ceil(c.measureText(t).width) + 14, h = (a.main ? 33 : 26) + 30;
+  const x = clamp(o.x - w / 2, 4, 956 - w), y = o.y - h - 6;
+  rect(c, x, y, w, 20, '#fff'); c.strokeStyle = '#17222C'; c.lineWidth = 1.5; c.strokeRect(x + .5, y + .5, w - 1, 19);
+  rect(c, o.x - 3, y + 19, 6, 5, '#fff');
+  c.fillStyle = '#17202A'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(t, x + 7, y + 10.5);
+}
+function officeDraw() {
+  const c = octx;
+  c.setTransform(ocv.width / 960, 0, 0, ocv.height / 560, 0, 0); c.imageSmoothingEnabled = false;
+  drawRoom(c);
+  const byDesk = new Map([...oActors.values()].map(o => [o.desk, o]));
+  for (const d of DESKS) drawDesk(c, d, byDesk.get(d));
+  const list = [...oActors.values()].sort((p, q) => p.y - q.y);
+  for (const o of list) drawActor(c, o);
+  for (const o of list) drawBubble(c, o);
+  if (!list.length) label(c, 'La oficina está vacía: aquí aparecerán tus sesiones', 480, 290, '#fff', 'rgba(8,14,20,.72)');
+}
+let vista = 'pantalla';
+function setVista(v) {
+  vista = v === 'oficina' ? 'oficina' : 'pantalla';
+  $('.room:not(.officeRoom)').hidden = vista === 'oficina';
+  $('#officeRoom').hidden = vista !== 'oficina';
+  document.querySelectorAll('.seg button[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === vista));
+  try { localStorage.setItem('oficina-vista', vista); } catch {}
+  if (vista === 'pantalla') fit();
+}
+document.querySelectorAll('.seg button[data-view]').forEach(b => b.addEventListener('click', () => setVista(b.dataset.view)));
+try { setVista(localStorage.getItem('oficina-vista') || 'pantalla'); } catch { setVista('pantalla'); }
 
 /* ---------- Arranque y bucle ---------- */
 if (CAN_LIVE) startLive();
@@ -1165,8 +1461,10 @@ function frame(now) {
     dt *= speed; elapsed += dt;
     if (status !== 'done') taskT += dt;
     agents.slice().forEach(a => a.alive && a.update(dt));
+    officeUpdate(dt);
     shown += (progress - shown) * Math.min(1, dt * 3);
   }
+  if (vista === 'oficina') officeDraw();
   if ((sideT -= dt) <= 0) { sideT = .25; renderSide(); }
   requestAnimationFrame(frame);
 }
