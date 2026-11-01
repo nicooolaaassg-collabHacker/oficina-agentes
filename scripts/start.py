@@ -3,7 +3,11 @@
 en marcha) y abre la página en el navegador.
 
 Uso:  python3 scripts/start.py [--no-open]
+
+La dirección se cambia en ~/.claude/oficina/config.json, por ejemplo
+{"host": "mioficina", "port": 80}, o con OFICINA_HOST y OFICINA_PORT.
 """
+import json
 import os
 import socket
 import subprocess
@@ -12,9 +16,15 @@ import time
 import webbrowser
 from pathlib import Path
 
-PORT = int(os.environ.get("OFICINA_PORT", 4545))
-URL = f"http://localhost:{PORT}"
-LOG = Path.home() / ".claude" / "oficina" / "server.log"
+DIR = Path.home() / ".claude" / "oficina"
+LOG = DIR / "server.log"
+try:
+    CFG = json.loads((DIR / "config.json").read_text())
+except (OSError, ValueError):
+    CFG = {}
+HOST = os.environ.get("OFICINA_HOST") or CFG.get("host") or "oficina.localhost"
+PORT = int(os.environ.get("OFICINA_PORT") or CFG.get("port") or 4545)
+URL = f"http://{HOST}" + ("" if PORT == 80 else f":{PORT}")
 
 
 def running():
@@ -39,6 +49,8 @@ if not running():
 
 if running():
     print(f"La oficina de Claude está en {URL}")
+    if HOST != "localhost":
+        print(f"Si no abre, prueba http://localhost:{PORT}")
     if "--no-open" not in sys.argv:
         webbrowser.open(URL)
 else:
