@@ -303,15 +303,17 @@ function fit() { stage.style.transform = `scale(${screen.clientWidth / W})`; }
 new ResizeObserver(fit).observe(screen); fit();
 
 /* ---------- Sprites pixel ---------- */
-const COLORS = { claude: '#D97757', amber: '#E2A443', sage: '#7FB07A', sky: '#6E9FD6', lilac: '#AE8FD8', rose: '#E07F9C' };
+const COLORS = { claude: '#D97757', codex: '#4FB3A9', amber: '#E2A443', sage: '#7FB07A', sky: '#6E9FD6', lilac: '#AE8FD8', rose: '#E07F9C' };
 function shade(hex, f) { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.round(v * f)); return `rgb(${c})`; }
 const cache = new Map();
-function sprite(color, { legs = 0, eye = 0, blink = false, arms = 'down' } = {}) {
-  const key = [color, legs, eye, blink, arms].join('|');
+// kind 'codex': cabeza redonda, antena y ojos cuadrados, para distinguir las sesiones de Codex
+function sprite(color, { legs = 0, eye = 0, blink = false, arms = 'down', kind = '' } = {}) {
+  const key = [color, legs, eye, blink, arms, kind].join('|');
   if (cache.has(key)) return cache.get(key);
   const c = document.createElement('canvas'); c.width = 16; c.height = 11;
   const g = c.getContext('2d');
   g.fillStyle = color; g.fillRect(3, 2, 10, 7);
+  if (kind === 'codex') { g.clearRect(3, 2, 1, 1); g.clearRect(12, 2, 1, 1); g.fillRect(8, 1, 1, 1); g.fillStyle = shade(color, 1.25); g.fillRect(8, 0, 1, 1); g.fillStyle = color; }
   g.fillStyle = shade(color, .8); g.fillRect(3, 8, 10, 1);
   g.fillStyle = color;
   const ay = side => (arms === 'up' || arms === side) ? 2 : 4;
@@ -319,7 +321,8 @@ function sprite(color, { legs = 0, eye = 0, blink = false, arms = 'down' } = {})
   g.fillStyle = shade(color, .8);
   [4, 6, 9, 11].forEach((x, i) => { let h = 2; if (legs === 1) h = i % 2 ? 1 : 2; if (legs === 2) h = i % 2 ? 2 : 1; g.fillRect(x, 9, 1, h); });
   g.fillStyle = '#2A1A12';
-  g.fillRect(5 + eye, blink ? 5 : 4, 1, blink ? 1 : 2); g.fillRect(10 + eye, blink ? 5 : 4, 1, blink ? 1 : 2);
+  const ew = kind === 'codex' ? 2 : 1;
+  g.fillRect(5 + eye - ew + 1, blink ? 5 : 4, ew, blink ? 1 : 2); g.fillRect(10 + eye, blink ? 5 : 4, ew, blink ? 1 : 2);
   const url = c.toDataURL(); cache.set(key, url); return url;
 }
 $('#logo').src = sprite(COLORS.claude);
@@ -497,7 +500,7 @@ const planLines = t => ['# Plan', ...t.steps.map(s => '- ' + s), '', 'Agentes: e
 /* ---------- Agentes ---------- */
 class Agent {
   constructor(o) {
-    Object.assign(this, { name: o.name, role: o.role || '', color: o.color, scale: o.scale || 4, main: !!o.main });
+    Object.assign(this, { name: o.name, role: o.role || '', color: o.color, kind: o.kind || '', scale: o.scale || 4, main: !!o.main });
     this.w = 16 * this.scale; this.h = 11 * this.scale;
     this.x = clamp(o.x ?? 440, 0, W - this.w); this.y = clamp(o.y ?? 300, 56, FLOOR - this.h);
     Object.assign(this, { queue: [], step: null, t: rnd(0, 3), eye: 0, blinkT: rnd(1, 4), carry: null, act: 'Pensando', wins: {}, id: ++uid, alive: true, hop: 0, bubT: 0, glance: 2 });
@@ -540,7 +543,7 @@ class Agent {
     this.render();
   }
   render() {
-    const src = sprite(this.color, { legs: this.pose.legs, eye: this.eye, blink: this.blinkT < 0, arms: this.pose.arms });
+    const src = sprite(this.color, { legs: this.pose.legs, eye: this.eye, blink: this.blinkT < 0, arms: this.pose.arms, kind: this.kind });
     if (this._src !== src) { this.img.src = src; this._src = src; }
     this.img.style.transform = this.hop ? `translateY(${-this.hop}px)` : '';
     this.el.style.transform = `translate(${this.x}px,${this.y}px)`;
@@ -866,7 +869,7 @@ function renderSide() {
   $('#stAgents').textContent = stats.agents; $('#stDone').textContent = stats.done;
   const subs = agents.filter(a => !a.main).length;
   $('#agentCount').textContent = subs ? `${subs} en marcha` : 'solo Claude';
-  $('#roster').innerHTML = agents.map(a => `<li><img alt="" src="${sprite(a.color)}"><div style="min-width:0"><div class="rn">${esc(a.name)}<small>${a.main ? 'principal' : esc(a.role)}</small></div><div class="ra">${esc(a.act)}</div></div><span class="chip ${a.main ? 'lead' : 'on'}">${a.main ? 'dirige' : 'trabaja'}</span></li>`).join('');
+  $('#roster').innerHTML = agents.map(a => `<li><img alt="" src="${sprite(a.color, { kind: a.kind })}"><div style="min-width:0"><div class="rn">${esc(a.name)}<small>${a.main ? 'principal' : esc(a.role)}</small></div><div class="ra">${esc(a.act)}</div></div><span class="chip ${a.main ? 'lead' : 'on'}">${a.main ? 'dirige' : 'trabaja'}</span></li>`).join('');
   const d = new Date(); $('#clock').textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
@@ -906,16 +909,21 @@ const CAN_LIVE = !!document.querySelector('meta[name="oficina-live"]');
 const sessions = new Map();
 const touched = new Set();
 let focus = null;
-const TYPE_NAME = { Explore: 'Explorador', Plan: 'Planificador', 'general-purpose': 'Agente', 'claude-code-guide': 'Guía' };
+const TYPE_NAME = { Explore: 'Explorador', Plan: 'Planificador', 'general-purpose': 'Agente', 'claude-code-guide': 'Guía', default: 'Agente' };
 const prettyType = t => TYPE_NAME[t] || (t ? t.replace(/[-_]/g, ' ').replace(/^\w/, c => c.toUpperCase()) : 'Agente');
 const roleOf = t => /explor|search|guide/i.test(t) ? 'explorer' : /plan|review|revis|audit/i.test(t) ? 'reviewer' : /test|qa|verif/i.test(t) ? 'tester' : 'coder';
 const shortProj = p => p.length > 16 ? p.slice(0, 15) + '…' : p;
 const nowS = () => Date.now() / 1000;
+// Cada sesión puede ser de Claude Code o de Codex (hook.py marca las de Codex con app: 'codex')
+const APP = { claude: { name: 'Claude', color: COLORS.claude, kind: '' }, codex: { name: 'Codex', color: COLORS.codex, kind: 'codex' } };
+const appOf = s => APP[s.app] || APP.claude;
+// Los agentes de Codex son de tipo 'default': su nombre sale de la tarea ("explorador")
+const subType = (atype, desc) => atype && atype !== 'default' ? atype : (desc || atype || '');
 
 function ensureSession(e) {
   let s = sessions.get(e.sid);
   if (!s) {
-    s = { sid: e.sid, proj: e.proj || 'sesión', subs: new Map(), pending: [], prompt: '', plan: [], last: e.ts, turnStart: e.ts, state: 'wait', tools: 0 };
+    s = { sid: e.sid, app: e.app || 'claude', proj: e.proj || 'sesión', subs: new Map(), pending: [], prompt: '', plan: [], last: e.ts, turnStart: e.ts, state: 'wait', tools: 0 };
     sessions.set(e.sid, s);
   }
   s.last = e.ts;
@@ -923,13 +931,14 @@ function ensureSession(e) {
 }
 function spawnMain(s) {
   const n = [...sessions.values()].filter(x => x.main?.alive).length;
-  s.main = new Agent({ name: `Claude · ${shortProj(s.proj)}`, role: 'principal', color: COLORS.claude, scale: 4, main: true, x: 260 + n * 150, y: 280 + n * 30 });
+  const A = appOf(s);
+  s.main = new Agent({ name: `${A.name} · ${shortProj(s.proj)}`, role: 'principal', color: A.color, kind: A.kind, scale: 4, main: true, x: 260 + n * 150, y: 280 + n * 30 });
   s.main.act = s.state === 'work' ? 'Trabajando' : 'Esperando tu mensaje';
-  burst(s.main.x + 32, s.main.y + 22, COLORS.claude, 12);
+  burst(s.main.x + 32, s.main.y + 22, A.color, 12);
 }
 function spawnLiveSub(s, id, atype, desc) {
-  const R = ROLES[roleOf(atype || '')], p = s.main;
-  const b = new Agent({ name: prettyType(atype), role: atype || 'agente', color: COLORS[R.color], scale: 3, x: p.x + p.w / 2 - 24 + rnd(-30, 30), y: p.y + p.h - 33 });
+  const t = subType(atype, desc), R = ROLES[roleOf(t)], p = s.main;
+  const b = new Agent({ name: prettyType(t), role: t || 'agente', color: COLORS[R.color], kind: appOf(s).kind, scale: 3, x: p.x + p.w / 2 - 24 + rnd(-30, 30), y: p.y + p.h - 33 });
   b.act = desc || 'Empezando'; b.session = s;
   s.subs.set(id, b); stats.agents++;
   burst(b.x + b.w / 2, b.y + b.h / 2, b.color, 12);
@@ -942,7 +951,7 @@ function actorFor(s, e) {
   return b?.alive ? b : spawnLiveSub(s, e.agent, e.atype, s.pending.shift());
 }
 // Para el registro durante el historial, cuando aún no hay muñecos
-const ghost = (s, e) => e.agent ? { name: prettyType(e.atype), color: COLORS[ROLES[roleOf(e.atype || '')].color] } : { name: `Claude · ${shortProj(s.proj)}`, color: COLORS.claude };
+const ghost = (s, e) => e.agent ? { name: prettyType(e.atype), color: COLORS[ROLES[roleOf(e.atype || '')].color] } : { name: `${appOf(s).name} · ${shortProj(s.proj)}`, color: appOf(s).color };
 
 /* Iconos de archivo reales en la columna derecha del escritorio (5 huecos) */
 function fileIcon(name) {
@@ -1018,6 +1027,8 @@ function toolSteps(e) {
       return [[{ t: 'say', text: `Cargo la skill ${e.desc}`, d: 2, hold: .6, act: `Usando ${e.desc}` }], e.desc];
     case 'AskUserQuestion':
       return [[{ t: 'say', text: 'Te hago una pregunta…', d: 4, hold: .6, act: 'Esperando tu respuesta' }], 'pregunta'];
+    case 'WaitAgent':
+      return [[{ t: 'say', text: 'Espero a mi agente…', d: 2, hold: .6, act: 'Esperando a su agente' }], 'espera a su agente'];
     case 'SubagentHandback':
       return [[{ t: 'say', text: 'Ya tengo el resultado.', d: 1.6, hold: .5 }], 'entrega el resultado'];
   }
@@ -1079,7 +1090,7 @@ function onEvent(e, animate) {
       log(who, null, 'termina y entrega su trabajo', e.ts);
       if (a && !a.main) {
         a.push(
-          { t: 'walk', to: b => s.main?.alive ? { x: s.main.x + (b.x < s.main.x ? -b.w - 6 : s.main.w + 6), y: s.main.y + s.main.h - b.h } : null, follow: true, act: 'Volviendo con Claude' },
+          { t: 'walk', to: b => s.main?.alive ? { x: s.main.x + (b.x < s.main.x ? -b.w - 6 : s.main.w + 6), y: s.main.y + s.main.h - b.h } : null, follow: true, act: `Volviendo con ${appOf(s).name}` },
           { t: 'say', text: '¡Terminado!', d: 1.6, hold: 1 },
           { t: 'call', fn: () => { s.main?.say(pick(['Gracias.', 'Perfecto.', 'Genial.']), 1.6); s.subs.delete(e.agent); } },
           { t: 'wait', d: .4 }, { t: 'leave' },
@@ -1113,7 +1124,7 @@ function liveSide() {
   // Las sesiones que llevan 30 min sin hacer nada se van del escritorio
   for (const s of sessions.values()) if (s.main?.alive && s.state !== 'work' && nowS() - s.last > 1800) { s.subs.forEach(b => b.remove()); s.main.remove(); }
   const s = focus;
-  $('#taskName').textContent = s ? (s.prompt || 'Esperando tu mensaje') : 'Esperando actividad: usa Claude Code en cualquier sesión y aparecerá aquí.';
+  $('#taskName').textContent = s ? (s.prompt || 'Esperando tu mensaje') : 'Esperando actividad: usa Claude Code o Codex en cualquier sesión y aparecerá aquí.';
   $('#taskNum').textContent = s ? s.proj : '';
   planItems = s ? s.plan : [];
   renderPlan();
@@ -1127,7 +1138,7 @@ function startLive() {
   $('#mode').textContent = 'EN DIRECTO'; $('#mode').classList.add('on');
   $('#btnAgent').hidden = true; $('#taskForm').hidden = true;
   $('#stDoneLabel').textContent = 'turnos terminados';
-  $('#hint').textContent = 'En directo: cada muñeco es una de tus sesiones de Claude Code o uno de sus agentes. Barra espaciadora: pausar o seguir.';
+  $('#hint').textContent = 'En directo: cada muñeco es una de tus sesiones de Claude Code (naranja) o de Codex (turquesa, con antena), o uno de sus agentes. Barra espaciadora: pausar o seguir.';
   $('#taskName').textContent = 'Conectando…';
   setStatus('idle');
   const es = new EventSource('/events');
