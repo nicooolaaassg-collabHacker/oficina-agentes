@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Hook de Claude Code para "La oficina de Claude".
+"""Hook de Claude Code y de Codex para "La oficina de Claude".
 
-Lee el evento que Claude Code manda por stdin y añade una línea resumida a
+Lee el evento que Claude Code (o Codex) manda por stdin y añade una línea resumida a
 ~/.claude/oficina/events.jsonl. El servidor de la oficina lee ese archivo y lo
 envía a la página. No imprime nada y nunca falla, para no molestar a la sesión.
 """
@@ -35,6 +35,9 @@ def lines(s, n=6, w=70):
 
 def plan_of(ti):
     p = {}
+    # Codex: update_plan manda {"plan": [{"step", "status"}]} y reemplaza el plan entero
+    if isinstance(ti.get("plan"), list):
+        ti = {"items": [{"content": t.get("step"), "status": t.get("status")} for t in ti["plan"] if isinstance(t, dict)]}
     for key in ("todos", "items"):
         if isinstance(ti.get(key), list):
             p["items"] = [
@@ -47,6 +50,30 @@ def plan_of(ti):
     return p
 
 
+def is_codex(d):
+    return "turn_id" in d or "/.codex/" in str(d.get("transcript_path", ""))
+
+
+def codex_tool(tool, ti):
+    """Traduce las herramientas de Codex a las de Claude Code que ya sabe dibujar la oficina."""
+    name = tool.rsplit("__", 1)[-1].removeprefix("collaboration")
+    if name in ("exec_command", "shell", "local_shell"):
+        cmd = ti.get("cmd") or ti.get("command")
+        return "Bash", {"command": " ".join(cmd) if isinstance(cmd, list) else cmd}
+    if name == "spawn_agent":
+        return "Agent", {"description": ti.get("task_name") or "una tarea", "subagent_type": ti.get("agent_type") or ti.get("task_name")}
+    if name == "wait_agent":
+        return "WaitAgent", ti
+    if name == "apply_patch":
+        patch = str(ti.get("command") or ti.get("input") or ti.get("patch") or "")
+        for ln in patch.splitlines():
+            if ln.startswith(("*** Add File: ", "*** Update File: ")):
+                added = "\n".join(l[1:] for l in patch.splitlines() if l.startswith("+") and not l.startswith("+++"))
+                return ("Write" if ln.startswith("*** Add") else "Edit"), {"file_path": ln.split(": ", 1)[1].strip(), "content": added, "new_string": added}
+        return "Edit", {}
+    return tool, ti
+
+
 def summarize(d):
     ev = d.get("hook_event_name", "")
     e = {
@@ -55,6 +82,9 @@ def summarize(d):
         "sid": str(d.get("session_id", ""))[:8],
         "proj": os.path.basename(str(d.get("cwd", "")).rstrip("/")) or "",
     }
+    codex = is_codex(d)
+    if codex:
+        e["app"] = "codex"
     if d.get("agent_id"):
         e["agent"] = str(d["agent_id"])[:16]
     if d.get("agent_type"):
@@ -62,9 +92,11 @@ def summarize(d):
 
     tool = d.get("tool_name")
     if tool:
+        ti = d.get("tool_input") if isinstance(d.get("tool_input"), dict) else {}
+        if codex:
+            tool, ti = codex_tool(tool, ti)
         e["tool"] = tool
         e["tid"] = str(d.get("tool_use_id", ""))[-10:]
-        ti = d.get("tool_input") if isinstance(d.get("tool_input"), dict) else {}
         path = ti.get("file_path") or ti.get("notebook_path") or ti.get("path")
         if path:
             e["file"] = os.path.basename(str(path).rstrip("/")) or str(path)
