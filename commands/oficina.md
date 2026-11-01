@@ -9,4 +9,4 @@ Abre La oficina de Claude. Ejecuta exactamente este comando con la herramienta B
 python3 "${CLAUDE_PLUGIN_ROOT:-$(cat ~/.claude/oficina/root.txt)}/scripts/start.py"
 ```
 
-Después responde con una sola frase: el enlace que imprime (normalmente http://localhost:4545) y que ahí se ve en directo lo que hacen sus sesiones de Claude Code y sus agentes. No hagas nada más.
+Después responde con una sola frase: el enlace que imprime (normalmente http://oficina.localhost:4545) y que ahí se ve en directo lo que hacen sus sesiones de Claude Code y sus agentes. No hagas nada más.
