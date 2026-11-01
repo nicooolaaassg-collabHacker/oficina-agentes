@@ -43,7 +43,7 @@ Escribe en Claude Code:
 /oficina
 ```
 
-Se abre http://oficina.localhost:4545 en tu navegador (si no carga, usa http://localhost:4545). Déjala abierta y sigue trabajando con Claude Code como siempre: cualquier sesión que abras aparecerá en la oficina.
+Se abre `http://oficina.localhost:4545` en tu navegador (si no carga, usa `http://localhost:4545`). Esa dirección solo existe en tu ordenador mientras la oficina está en marcha. Déjala abierta y sigue trabajando con Claude Code como siempre: cualquier sesión que abras aparecerá en la oficina.
 
 Si prefieres arrancarla a mano, desde la carpeta del plugin:
 
@@ -72,7 +72,7 @@ Escríbelo siempre con `http://` delante, o el navegador lo buscará en internet
 Todo se queda en tu ordenador:
 
 - Los hooks del plugin apuntan un resumen de cada acción en `~/.claude/oficina/events.jsonl`: el nombre de la herramienta, el comando, el nombre del archivo, las primeras líneas de lo que se escribe y tu mensaje recortado. El archivo se recorta solo cuando pasa de 3 MB.
-- El servidor solo escucha en `127.0.0.1`, así que nadie de fuera puede abrir la página.
+- El servidor solo atiende a tu propio ordenador: rechaza las peticiones que llegan de otros equipos o con un nombre que no conoce, así que nadie de fuera puede abrir la página.
 - No se envía nada a internet. La página solo descarga las tipografías de Google Fonts.
 
 Para borrar todo lo apuntado: `rm -rf ~/.claude/oficina`.
@@ -100,7 +100,7 @@ Los hooks van en segundo plano (`async`), así que no ralentizan tus sesiones.
 
 ## English
 
-**Claude's Office** is an unofficial community Claude Code plugin (not made or endorsed by Anthropic) that shows your Claude Code sessions and their subagents working live, as pixel-art characters moving around a desktop. Install it with `/plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/oficina-agentes`, then type `/oficina` to open http://oficina.localhost:4545 (address configurable in `~/.claude/oficina/config.json`). Everything stays on your machine: events are logged to `~/.claude/oficina/events.jsonl` and the server only listens on `127.0.0.1`. The interface is in Spanish.
+**Claude's Office** is an unofficial community Claude Code plugin (not made or endorsed by Anthropic) that shows your Claude Code sessions and their subagents working live, as pixel-art characters moving around a desktop. Install it with `/plugin install oficina-agentes --marketplace nicooolaaassg-collabHacker/oficina-agentes`, then type `/oficina` to open `http://oficina.localhost:4545` on your own machine (address configurable in `~/.claude/oficina/config.json`). Everything stays on your machine: events are logged to `~/.claude/oficina/events.jsonl` and the server only answers requests from your own computer. The interface is in Spanish.
 
 ## Licencia
 
