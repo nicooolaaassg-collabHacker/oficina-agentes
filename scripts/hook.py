@@ -11,6 +11,7 @@ import sys
 import time
 
 DIR = os.path.join(os.path.expanduser("~"), ".claude", "oficina")
+CONFIG = os.path.join(DIR, "config.json")
 LOG = os.path.join(DIR, "events.jsonl")
 KEYS = os.path.join(DIR, "keys.json")
 ROOT_FILE = os.path.join(DIR, "root.txt")
@@ -137,6 +138,23 @@ def summarize(d):
     return e
 
 
+def private():
+    """Con {"privado": true} en config.json no se guardan tus mensajes ni el código, y de cada comando solo el programa."""
+    try:
+        with open(CONFIG) as f:
+            return bool(json.load(f).get("privado"))
+    except Exception:
+        return False
+
+
+def redact(e):
+    for k in ("prompt", "snip", "q", "desc"):
+        e.pop(k, None)
+    if e.get("cmd"):
+        e["cmd"] = e["cmd"].split()[0]
+    return e
+
+
 def remember_keys(d):
     # Ayuda a depurar: qué campos trae cada tipo de evento (sin sus valores)
     try:
@@ -166,7 +184,8 @@ def main():
         with open(ROOT_FILE, "w") as f:
             f.write(PLUGIN_ROOT)
     with open(LOG, "a") as f:
-        f.write(json.dumps(summarize(d), ensure_ascii=False) + "\n")
+        e = summarize(d)
+        f.write(json.dumps(redact(e) if private() else e, ensure_ascii=False) + "\n")
     if os.path.getsize(LOG) > MAX_BYTES:
         with open(LOG, "rb") as f:
             f.seek(-MAX_BYTES // 3, 2)
