@@ -13,10 +13,11 @@ Cada sesión de Claude Code es un muñeco naranja y cada sesión de Codex, uno t
 - cuando un agente termina, vuelve con quien lo lanzó, le entrega el trabajo y se va,
 - al acabar el turno, cierra las ventanas, celebra y espera tu mensaje.
 
-Hay dos vistas, que se cambian arriba con **Pantalla** / **Oficina**:
+Hay tres vistas, que se cambian arriba con **Pantalla** / **Oficina** / **Cronología**:
 
 - **Pantalla:** el ordenador pixel art de siempre, con sus ventanas.
 - **Oficina:** la oficina vista desde arriba. Cada agente tiene su mesa con monitor; va a la estantería cuando lee archivos, a la pizarra cuando toca el plan, a la pantalla de internet cuando navega, al café cuando espera tu mensaje, y entra y sale por la puerta.
+- **Cronología:** una fila por agente y un bloque de color por cada herramienta, de su inicio a su final (verde terminal, azul leer, morado editar, celeste web, ámbar plan, rosa agentes; los fallos con borde rojo). Las líneas naranjas son tus mensajes y las verdes, los finales de turno. Pasa el ratón por un bloque para ver qué era y cuánto tardó; arriba eliges ver el último minuto, 5, 15 o una hora.
 
 A la derecha tienes tu último mensaje, el plan (cuando hay uno), qué está haciendo cada agente y un registro con cada herramienta que usan, con buscador y un filtro de solo fallos. Si tienes varias sesiones abiertas, eliges cuál sigue el panel; si una herramienta falla, el aviso se queda a la vista hasta que vuelve a ir bien.
 
